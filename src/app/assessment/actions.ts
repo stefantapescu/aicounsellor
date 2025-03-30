@@ -18,7 +18,7 @@ import {
 // Type for simplified badge data (can be shared)
 interface BadgeData {
     id: string;
-    name: string;
+    name: string; // Added name for feedback
     criteria: {
         quiz_completed?: string;
         points_required?: number;
@@ -26,13 +26,13 @@ interface BadgeData {
     }
 }
 
-// Define a more specific type for response data if possible, or use Record<string, any>
+// Define a more specific type for response data
 type ResponseData = Record<string, number | string | string[]>;
 
 interface VocationalResponsePayload {
   userId: string;
   assessmentId?: string;
-  sectionId: string; // Keep SectionId from assessmentData if needed elsewhere, or use string here
+  sectionId: string; // Use string here, SectionId type was unused
   responseData: ResponseData; // Use defined type
 }
 
@@ -68,7 +68,9 @@ export async function saveVocationalResponse({
             supabase.from('user_progress').select('points, level, earned_badge_ids').eq('user_id', userId).single(),
             supabase.from('badges').select('id, name, criteria')
         ]);
-        const currentProgress = progressResult.data || { points: 0, level: 1, earned_badge_ids: [] };
+        // Define type for progress data
+        type UserProgress = { points: number; level: number; earned_badge_ids: string[] | null };
+        const currentProgress: UserProgress = progressResult.data || { points: 0, level: 1, earned_badge_ids: [] };
         if (progressResult.error && progressResult.error.code !== 'PGRST116') throw progressResult.error;
         if (badgesResult.error) throw badgesResult.error;
         const badges = (badgesResult.data || []) as BadgeData[];
@@ -106,12 +108,22 @@ interface RawResponseRow {
     response_data: ResponseData | null;
 }
 
+// Define type for profile row
+interface ProfileRow {
+    riasec_scores: Record<string, number> | null;
+    personality_scores: Record<string, number> | null;
+    aptitude_scores: { verbalCorrect: number, numericalCorrect: number, abstractCorrect: number, totalCorrect: number, totalAttempted: number } | null;
+    work_values: { ranked: string[] } | null;
+    learning_style: string | null;
+}
+
+
 // --- Helper Function to fetch and format data for prompts ---
 // Added specific type for supabase client
-async function getAssessmentDataForPrompt(userId: string, assessmentId: string, supabase: SupabaseClient) {
+async function getAssessmentDataForPrompt(userId: string, assessmentId: string, supabase: SupabaseClient): Promise<string> {
     const [responsesResult, profileResult] = await Promise.all([
       supabase.from('vocational_responses').select('section_id, response_data').eq('user_id', userId).eq('assessment_id', assessmentId),
-      supabase.from('user_assessment_profiles').select('riasec_scores, personality_scores, aptitude_scores, work_values, learning_style').eq('user_id', userId).limit(1).single()
+      supabase.from('user_assessment_profiles').select('riasec_scores, personality_scores, aptitude_scores, work_values, learning_style').eq('user_id', userId).limit(1).single<ProfileRow>() // Use ProfileRow type
     ]);
     const { data: responses, error: fetchResponsesError } = responsesResult;
     const { data: profile, error: fetchProfileError } = profileResult;
@@ -135,7 +147,7 @@ async function getAssessmentDataForPrompt(userId: string, assessmentId: string, 
 
     promptData += `**2. Raw Answers Provided by Student:**\n`;
     // Added type for res
-    responses.forEach((res: RawResponseRow) => {
+    (responses as RawResponseRow[]).forEach((res: RawResponseRow) => { // Cast responses array
       promptData += `- Section: ${res.section_id}\n`;
       promptData += `  Responses: ${res.response_data ? JSON.stringify(res.response_data) : '[No data]'}\n`;
     });
@@ -240,10 +252,11 @@ export async function saveAnalysisResult(
     const supabase = await createClient();
     try {
         // Define type for the data being upserted
+        // Use Record<string, unknown> for jsonb fields to avoid 'any'
         type VocationalResultUpsert = {
             user_id: string;
             assessment_id: string;
-            riasec_scores?: any; // Using any temporarily, should match DB type (jsonb)
+            riasec_scores?: Record<string, unknown> | null;
             strengths_analysis?: string | null;
             areas_for_development?: string | null;
             potential_contradictions?: string | null;
