@@ -9,7 +9,7 @@ type Props = {
 
 // Make component non-async, remove server-side auth check
 export default function LoginPage({ searchParams }: Props) {
-
+  // Added comment to trigger rebuild
   // Middleware handles redirecting logged-in users away from this page
 
   return (
