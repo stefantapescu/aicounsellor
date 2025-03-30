@@ -2,9 +2,13 @@ import Link from 'next/link'
 // Removed unused redirect, oauthSignIn imports
 import { login } from '@/app/auth/actions'
 
-// Removed explicit props interface and type annotation
+// Define the standard Props type for a Next.js page
+type Props = {
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
 // Make component non-async, remove server-side auth check
-export default function LoginPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+export default function LoginPage({ searchParams }: Props) {
 
   // Middleware handles redirecting logged-in users away from this page
 
