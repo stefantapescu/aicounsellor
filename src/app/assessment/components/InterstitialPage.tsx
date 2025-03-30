@@ -28,6 +28,8 @@ const InterstitialPage: React.FC<InterstitialPageProps> = ({
             <Button
                 onClick={onContinue}
                 disabled={isPending}
+                title="Continue to the next section"
+                aria-label="Continue to the next section"
                 className="bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-700 dark:hover:bg-purple-800"
             >
                 {isPending ? 'Loading...' : 'Continue'}
