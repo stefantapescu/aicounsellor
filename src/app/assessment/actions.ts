@@ -307,7 +307,7 @@ type UserProfileUpsert = {
     aptitude_scores: { verbalCorrect: number; numericalCorrect: number; abstractCorrect: number; totalCorrect: number; totalAttempted: number; };
     work_values?: { ranked: string[]; } | null;
     learning_style: string;
-    raw_responses_snapshot?: Record<string, any>; // Use Record<string, any> for flexibility
+    raw_responses_snapshot?: Record<string, string | number | string[]>; // More specific type
     updated_at: string;
 };
 
@@ -320,8 +320,8 @@ export async function generateAndSaveAssessmentProfile(userId: string, assessmen
     if (fetchError) throw fetchError;
     if (!rawResponses || rawResponses.length === 0) { return { error: 'No vocational responses found to generate profile.' }; }
 
-    // Use Record<string, any> for allAnswers
-    const allAnswers: Record<string, any> = rawResponses.reduce((acc, section) => { if (section.response_data && typeof section.response_data === 'object') { Object.assign(acc, section.response_data); } else { console.warn(`Unexpected response_data format for section ${section.section_id}:`, section.response_data); } return acc; }, {});
+    // Use specific type for allAnswers
+    const allAnswers: Record<string, string | number | string[]> = rawResponses.reduce((acc, section) => { if (section.response_data && typeof section.response_data === 'object') { Object.assign(acc, section.response_data); } else { console.warn(`Unexpected response_data format for section ${section.section_id}:`, section.response_data); } return acc; }, {});
 
     const riasecScores: Record<string, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
     const personalityScores: Record<string, number> = { O: 0, C: 0, E: 0, A: 0, N: 0 };

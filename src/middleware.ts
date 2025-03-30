@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/utils/supabase/middleware'
+// Removed unused updateSession import
 import { createServerClient, type CookieOptions } from '@supabase/ssr' // Import directly
 
 export async function middleware(request: NextRequest) {

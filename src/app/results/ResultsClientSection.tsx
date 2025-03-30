@@ -12,8 +12,24 @@ import { valueItems } from '@/app/assessment/assessmentData';
 interface ReportData {
   text: string;
   success: boolean;
-  updatedAt: string;
+    updatedAt: string;
 }
+
+// Define the expected shape of the saved analysis result from the action
+interface SavedVocationalResult {
+    user_id: string;
+    assessment_id: string;
+    riasec_scores?: Record<string, unknown> | null; // Keep unknown for flexibility if parsing isn't done here
+    strengths_analysis?: string | null;
+    areas_for_development?: string | null;
+    potential_contradictions?: string | null;
+    full_ai_analysis: { raw_response: string; generated_at: string; success: boolean; };
+    narrative_story: string; // Ensure this is included
+    updated_at: string;
+    id?: number; // Optional ID if selected
+    created_at?: string; // Optional timestamp if selected
+}
+
 
 interface AssessmentProfile {
   riasec_scores: Record<string, number> | null;
@@ -116,8 +132,9 @@ export default function ResultsClientSection({ userId, initialReport, initialSto
         const newAnalysisData: FullAIAnalysis | null | undefined = analysisResult.analysis?.full_ai_analysis;
         const newReportText = newAnalysisData?.raw_response ?? 'Analysis generated, but content is missing.';
         const newSuccess = newAnalysisData?.success ?? false;
-        // Safely access narrative_story from the analysis result
-        const newStoryText = (analysisResult.analysis as any)?.narrative_story ?? 'Personalized story generation failed.'; // Use 'as any' if type isn't precise
+        // Safely access narrative_story using the defined type
+        const savedAnalysis = analysisResult.analysis as SavedVocationalResult | null; // Use the specific type
+        const newStoryText = savedAnalysis?.narrative_story ?? 'Personalized story generation failed.';
 
         setReport({
           text: newReportText,

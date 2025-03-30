@@ -1,9 +1,8 @@
-import Link from 'next/link'
+// Removed unused Link, AuthAwareLinks imports
 // Removed server-side auth imports: cookies, createServerClient
 import { AIEducationHero } from '@/components/ai-education-hero'
 import { Features } from '@/components/ui/features'
 import { HowItWorksSection } from '@/components/ui/how-it-works'
-import { AuthAwareLinks } from './AuthAwareLinks' // Import the new client component
 import { MessageCircle, ClipboardList, Lightbulb } from "lucide-react";
 
 // Make the component non-async as auth check is moved to client

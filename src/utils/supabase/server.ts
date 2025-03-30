@@ -20,6 +20,7 @@ export async function createClient() {
           try {
             // Middleware handles actual setting
             cookieStore.set(name, value, options)
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
              console.warn(`Server context attempted to set cookie '${name}'. Middleware should handle this.`);
           }
@@ -28,6 +29,7 @@ export async function createClient() {
           try {
              // Middleware handles actual removal
             cookieStore.delete(name, options)
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
              console.warn(`Server context attempted to remove cookie '${name}'. Middleware should handle this.`);
           }

@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { CheckCircle, XCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+// Removed unused CheckCircle, XCircle, cn imports
 
 // Define types based on expected data structure
 interface QuizQuestion {
@@ -34,30 +33,27 @@ export default function QuizClientComponent({ userId, quizId, questions }: QuizC
     const [score, setScore] = useState(0);
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
-    const [feedback, setFeedback] = useState<Record<string, boolean>>({}); // { questionId: isCorrect }
+    // Removed unused feedback state
 
     const currentQuestion = questions[currentQuestionIndex];
 
     const handleAnswerChange = (questionId: string, selectedOptionId: string) => {
         setAnswers(prev => ({ ...prev, [questionId]: selectedOptionId }));
-        // Clear feedback for the current question if user changes answer after submitting (if allowed)
-        if (submitted) {
-            setFeedback(prev => ({ ...prev, [questionId]: undefined } as Record<string, boolean>));
-        }
+        // Removed feedback update logic
     };
 
     const handleSubmit = () => {
         let calculatedScore = 0;
-        const newFeedback: Record<string, boolean> = {};
+        // Removed newFeedback declaration
         questions.forEach(q => {
             const isCorrect = answers[q.id] === q.correct_option_id;
-            newFeedback[q.id] = isCorrect;
+            // Removed feedback assignment
             if (isCorrect) {
                 calculatedScore++;
             }
         });
         setScore(calculatedScore);
-        setFeedback(newFeedback);
+        // Removed feedback state update
         setSubmitted(true);
         setError(null); // Clear previous errors
 

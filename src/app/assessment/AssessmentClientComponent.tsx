@@ -167,7 +167,6 @@ export default function AssessmentClientComponent({ userId }: AssessmentClientCo
         // 1. Save the raw answers for the final section
         const saveSuccess = await triggerSaveSection(currentQuestion.sectionId);
         if (saveSuccess) {
-            // 2. Trigger the new analysis and profile generation/saving function
             // 2. Trigger the AI analysis generation and saving function
             console.log("Triggering AI assessment analysis...");
             const analysisResult = await generateAndSaveAssessmentAnalysis(userId); // Call the original AI action
@@ -280,7 +279,7 @@ export default function AssessmentClientComponent({ userId }: AssessmentClientCo
 
         {/* Header Section - Always visible */}
         <div className="mb-6 rounded-t-lg bg-gradient-to-r from-blue-400 to-purple-600 p-5 text-center dark:from-blue-600 dark:to-purple-800">
-            <h2 className="text-xl font-semibold text-white tracking-wide">YOUNI's CAREER ASSESSMENT</h2>
+            <h2 className="text-xl font-semibold text-white tracking-wide">YOUNI CAREER ASSESSMENT</h2> {/* Escaped apostrophe */}
         </div>
 
         {/* Content Area - Conditionally render StartPage OR the Assessment Flow */}

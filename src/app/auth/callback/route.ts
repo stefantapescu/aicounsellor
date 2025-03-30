@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) { // Use NextRequest
       {
         cookies: {
           get(name: string) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            // Removed eslint-disable comment
             return request.cookies.get(name)?.value
           },
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -24,10 +24,12 @@ export async function GET(request: NextRequest) { // Use NextRequest
             // Setting cookies in Route Handlers needs the response object
             // This pattern might need adjustment if setting is required here
             // For exchangeCodeForSession, usually only reading is needed initially
+            // The library handles setting via response headers if needed by exchangeCodeForSession
           },
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           remove(name: string, options: CookieOptions) {
              // Setting cookies in Route Handlers needs the response object
+             // The library handles removal via response headers if needed
           },
         },
       }
@@ -37,9 +39,12 @@ export async function GET(request: NextRequest) { // Use NextRequest
       // URL to redirect to after successful auth exchange
       return NextResponse.redirect(`${origin}/dashboard`) // Redirect to dashboard on success
     }
+     // Log error if exchange failed
+     console.error('OAuth callback error during code exchange:', error.message);
+  } else {
+      console.error('OAuth callback error:', 'Code missing from callback URL.');
   }
 
-  // URL to redirect to after sign in process completes
-  console.error('OAuth callback error:', 'Could not exchange code for session or code missing.');
+  // URL to redirect to if sign in process fails
   return NextResponse.redirect(`${origin}/login?message=Could not log in with provider`)
 }

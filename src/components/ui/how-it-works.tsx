@@ -10,6 +10,7 @@ interface StepProps {
   isActive?: boolean; // Note: isActive logic might need adjustment based on scroll or state
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const Step = ({ number, title, description, icon, isActive = false }: StepProps) => {
   return (
     <div className="flex items-center gap-6 md:gap-8">

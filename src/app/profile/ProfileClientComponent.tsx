@@ -5,7 +5,7 @@ import { type AssessmentQuestion, type ChoiceOption, scales, valueItems, type Wa
 import { Label } from '@/components/ui/label';
 
 interface ProfileClientComponentProps {
-  userAnswers: Record<string, { questionText: string; answer: any }>;
+  userAnswers: Record<string, { questionText: string; answer: string | number | string[] }>;
   allQuestionsMap: Map<string, AssessmentQuestion>;
 }
 

@@ -4,9 +4,15 @@ import { allQuestions, type AssessmentQuestion } from '@/app/assessment/assessme
 // Import the client component
 import ProfileClientComponent from './ProfileClientComponent';
 
+// Define type for the raw response data from Supabase
+type RawResponse = {
+  section_id: string;
+  response_data: Record<string, string | number | string[]> | null;
+};
+
 // Helper function to organize responses
-const organizeResponses = (responses: any[], questions: AssessmentQuestion[]) => {
-  const organized: Record<string, { questionText: string; answer: any }> = {};
+const organizeResponses = (responses: RawResponse[], questions: AssessmentQuestion[]) => {
+  const organized: Record<string, { questionText: string; answer: string | number | string[] }> = {};
   const questionMap = new Map(questions.map(q => [q.id, q]));
 
   responses.forEach(sectionResponse => {

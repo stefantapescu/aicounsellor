@@ -1,6 +1,6 @@
 import Link from 'next/link'
 // Removed server-side auth imports: headers, createClient
-import { redirect } from 'next/navigation' // Keep redirect if needed elsewhere
+// Removed unused redirect import
 import { signup } from '@/app/auth/actions'
 
 // Make component non-async, remove server-side auth check

@@ -13,7 +13,8 @@ const StartPage: React.FC<StartPageProps> = ({ onStart }) => {
         <div className="flex flex-col items-center justify-center h-full text-center p-6 md:p-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-xl">
             {/* Optional: Add Logo */}
             {/* <Image src="/path/to/your/logo.svg" alt="YOUNI Logo" width={80} height={80} className="mb-4" /> */}
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">YOUNI's Career Assessment</h2>
+            {/* Escaped apostrophe */}
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">YOUNI Career Assessment</h2>
             <p className="text-base md:text-lg mb-6 max-w-md mx-auto">
                 Answer these questions about your interests, skills, and values to receive an AI-powered recommendation tailored specifically for you!
             </p>

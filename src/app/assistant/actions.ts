@@ -9,7 +9,7 @@ interface SaveMessagePayload {
   role: 'user' | 'assistant';
   content: string;
   sessionId?: string; // Optional: To group conversations
-  metadata?: Record<string, any>; // Use Record<string, any> for metadata
+  metadata?: Record<string, unknown>; // Use Record<string, unknown> instead of any
 }
 
 // Action to save a single chat message
@@ -55,6 +55,13 @@ export async function saveChatMessage({
   }
 }
 
+// Define expected results type more specifically
+type VocResults = {
+    riasec_scores: Record<string, unknown> | null; // Use unknown for jsonb
+    strengths_analysis: string | null;
+    areas_for_development: string | null;
+    potential_contradictions: string | null;
+} | null;
 
 // Action to prepare context and prompt for the AI
 // Use CoreMessage[] for currentMessages type
@@ -79,8 +86,6 @@ export async function prepareAssistantPrompt(userId: string, currentMessages: Co
     if (profileError && profileError.code !== 'PGRST116') console.warn("Could not fetch profile:", profileError.message);
 
     // 2. Vocational Results (Latest)
-    // Define expected results type
-    type VocResults = { riasec_scores: any; strengths_analysis: string | null; areas_for_development: string | null; potential_contradictions: string | null } | null;
     const { data: results, error: resultsError } = await supabase
       .from('vocational_results')
       .select('riasec_scores, strengths_analysis, areas_for_development, potential_contradictions')

@@ -1,7 +1,7 @@
 import * as React from "react"; // Added import
 import { MessageCircle, ClipboardList, Lightbulb } from "lucide-react";
 import { Badge } from "@/components/ui/badge"; // Assuming this will be added
-import { cn } from "@/lib/utils"; // Assuming this exists
+// Removed unused cn import
 
 interface FeatureProps {
   icon: React.ReactNode;

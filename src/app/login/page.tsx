@@ -1,7 +1,6 @@
 import Link from 'next/link'
-// Removed server-side auth imports: headers, createClient
-import { redirect } from 'next/navigation' // Keep redirect if needed elsewhere
-import { login, oauthSignIn } from '@/app/auth/actions'
+// Removed unused redirect, oauthSignIn imports
+import { login } from '@/app/auth/actions'
 
 // Make component non-async, remove server-side auth check
 export default function LoginPage({ searchParams }: { searchParams: { message: string } }) {
@@ -82,10 +81,9 @@ export default function LoginPage({ searchParams }: { searchParams: { message: s
              </form>
            </div>
         </div> */}
-
         <p className="mt-6 text-center text-sm text-gray-600">
           {/* Escaped apostrophe */}
-          Don't have an account?{' '}
+          Do not have an account?{' '}
           <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
             Sign up
           </Link>

@@ -1,10 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { logout } from '@/app/auth/actions'
-// Badge and Image components are now used in the client component
-// import { Badge } from "@/components/ui/badge"
-// import Image from 'next/image'
-import DashboardClientComponent from './DashboardClientComponent' // Import the new client component
+import DashboardClientComponent from './DashboardClientComponent'
 
 // Define types for fetched data
 interface UserProgress {
@@ -18,9 +15,10 @@ interface BadgeInfo {
   description: string | null;
   icon_url: string | null;
 }
-interface VocationalResultStatus {
-  has_results: boolean;
-}
+// Removed unused VocationalResultStatus type
+// interface VocationalResultStatus {
+//   has_results: boolean;
+// }
 interface CompletedQuiz {
     quiz_id: string;
     // Add more fields if needed, e.g., total score, completion date
@@ -34,7 +32,6 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser()
 
   if (userError || !user) {
-    // This check is redundant if middleware is working, but good for robustness
     console.error('Dashboard access error or no user (server component check):', userError?.message)
     redirect('/login?message=You must be logged in to view the dashboard.')
   }
@@ -50,9 +47,8 @@ export default async function DashboardPage() {
     .from('badges')
     .select('id, name, description, icon_url');
 
-  if (progressError) {
+  if (progressError && progressError.code !== 'PGRST116') { // Ignore 'No rows found' for progress
     console.error('Error fetching user progress:', progressError.message);
-    // Handle error - maybe show default values?
   }
    if (badgesError) {
     console.error('Error fetching badges:', badgesError.message);
@@ -63,19 +59,17 @@ export default async function DashboardPage() {
     .from('vocational_results')
     .select('id') // Just check for existence
     .eq('user_id', user.id)
-    .maybeSingle(); // Use maybeSingle as results might not exist
+    .maybeSingle();
 
   if (vrError) {
     console.error('Error checking vocational results:', vrError.message);
   }
   const hasVocationalResults = !!vocationalResult;
 
-  // Fetch completed quizzes (distinct quiz_ids from responses)
-  // Note: This is a simple check. Calculating scores would be more complex.
-  // Fetch all quiz_ids for the user, then filter for unique ones in code.
+  // Fetch completed quizzes
   const { data: quizResponses, error: quizError } = await supabase
     .from('quiz_responses')
-    .select('quiz_id') // Select only the quiz_id column
+    .select('quiz_id')
     .eq('user_id', user.id);
 
   if (quizError) {
@@ -85,7 +79,6 @@ export default async function DashboardPage() {
   // Process to find unique quiz IDs
   const uniqueQuizIds = new Set<string>();
   if (quizResponses) {
-    // Add explicit type for 'response'
     quizResponses.forEach((response: { quiz_id: string }) => {
       if (response.quiz_id) {
         uniqueQuizIds.add(response.quiz_id);
@@ -98,29 +91,6 @@ export default async function DashboardPage() {
   // Filter earned badges
   const earnedBadgeIds = new Set(progress?.earned_badge_ids || []);
   const earnedBadges = (allBadges || []).filter(badge => earnedBadgeIds.has(badge.id)) as BadgeInfo[];
-
-  // Fetch profile data if needed (optional for basic display)
-  // const { data: profile, error: profileError } = await supabase
-  //   .from('profiles')
-  //   .select('username, full_name')
-  //   .eq('user_id', user.id)
-  //   .single()
-
-  // if (profileError) {
-  //   console.error('Error fetching profile:', profileError.message)
-  //   // Handle error appropriately, maybe show a default state
-  // }
-
-  // Fetch profile data if needed (optional for basic display)
-  // const { data: profile, error: profileError } = await supabase
-  //   .from('profiles')
-  //   .select('username, full_name')
-  //   .eq('user_id', user.id) // Use user.id from server-side check
-  //   .single()
-
-  // if (profileError) {
-  //   console.error('Error fetching profile:', profileError.message)
-  // }
 
   // Pass fetched data to the Client Component
   return (
