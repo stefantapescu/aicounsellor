@@ -53,11 +53,12 @@ export async function updateUserProgressAfterQuiz(userId: string, quizId: string
         questionsData.map(q => [q.id, q as QuestionScoreData])
     );
 
-    // --- 3. Calculate score and prepare updates ---
+    // --- 3. Calculate score ---
     let totalPointsEarnedThisQuiz = 0;
-    const updates = userResponses.map(response => {
+    // Removed unused 'updates' variable mapping
+    userResponses.forEach(response => {
         const question = questionsMap.get(response.question_id);
-        let isCorrect = null;
+        let isCorrect = false; // Default to false
         let pointsAwarded = 0;
 
         if (question && question.correct_answer !== null) {
@@ -68,12 +69,7 @@ export async function updateUserProgressAfterQuiz(userId: string, quizId: string
                 totalPointsEarnedThisQuiz += pointsAwarded;
             }
         }
-        // Update the response record with correctness and points (optional, but good for history)
-        return {
-            ...response,
-            is_correct: isCorrect,
-            points_awarded: pointsAwarded
-        };
+        // Note: We are not updating the quiz_responses table here, just calculating points.
     });
 
     // --- 4. Update quiz_responses table with scores (Optional) ---
@@ -150,8 +146,9 @@ export async function updateUserProgressAfterQuiz(userId: string, quizId: string
     // Return new level info as well
     return { success: true, points: newTotalPoints, level: newLevel, badges: finalBadgeIds };
 
-  } catch (error: any) {
-    console.error(`Error updating progress for user ${userId}, quiz ${quizId}:`, error.message)
-    return { error: error.message }
+  } catch (error: unknown) { // Type error as unknown
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error updating progress for user ${userId}, quiz ${quizId}:`, message)
+    return { error: message }
   }
 }

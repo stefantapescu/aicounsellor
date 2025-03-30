@@ -1,101 +1,85 @@
 'use client'
 
-import React, { useState } from 'react';
-// Import valueItems as well
-import { allQuestions, type AssessmentQuestion, type ChoiceOption, scales, valueItems } from '@/app/assessment/assessmentData';
-import { Button } from '@/components/ui/button'; // For potential future edit buttons
+import React from 'react';
+import { type AssessmentQuestion, type ChoiceOption, scales, valueItems, type WarmupChoiceQuestion, type ScenarioChoiceQuestion, type AptitudeQuestion, type LearningStyleQuestion, type LikertQuestion } from '@/app/assessment/assessmentData';
 import { Label } from '@/components/ui/label';
 
 interface ProfileClientComponentProps {
-  userId: string;
-  // Organized answers: { questionId: { questionText: string; answer: any } }
   userAnswers: Record<string, { questionText: string; answer: any }>;
-  // Pass allQuestions for context like options, scale types etc.
-  allQuestionsMap: Map<string, AssessmentQuestion>; // Pass as a Map for easier lookup
+  allQuestionsMap: Map<string, AssessmentQuestion>;
 }
 
-// Helper to display the answer in a readable format
-// Return type can be string or JSX.Element for the italic span
-const formatAnswer = (question: AssessmentQuestion | undefined, answer: any): string | React.JSX.Element => {
-  if (answer === undefined || answer === null) {
-    // Return string for consistency now, can style later if needed
-    return "Not Answered";
-  }
-  if (!question) {
-    return JSON.stringify(answer); // Fallback if question definition not found
-  }
+export default function ProfileClientComponent({ userAnswers, allQuestionsMap }: ProfileClientComponentProps) {
 
-  switch (question.inputType) {
-    case 'multiple_choice': // Covers warmup, aptitude, learning_style
-    case 'scenario_choice': // Covers interests, skills
-      // Find the chosen option text
-      const choiceQuestion = question as any; // Cast for options access (adjust if needed for stricter typing)
-      const chosenOption = choiceQuestion.options?.find((opt: ChoiceOption) => opt.id === answer);
-      return chosenOption ? chosenOption.text : `Unknown Option (${answer})`;
-    case 'likert':
-      // Find the label for the chosen scale value
-      const likertQuestion = question as any; // Cast for scaleType access
-      const scale = scales[likertQuestion.scaleType as keyof typeof scales];
-      const scaleOption = scale?.find(opt => opt.value === Number(answer));
-      return scaleOption ? `${scaleOption.label} (${answer})` : `Invalid Value (${answer})`;
-    case 'mini_challenge_text':
-    case 'textarea':
-      return answer.toString(); // Display text directly
-    case 'mini_challenge_textarea':
-       // Display textarea content, maybe truncated if too long for summary view
-       const text = answer.toString();
-       return text.length > 100 ? text.substring(0, 100) + '...' : text;
-    case 'value_ranking':
-      // Display the ranked list
-      if (Array.isArray(answer)) {
-        // Use the imported valueItems to map IDs to text
-        const valueMap = new Map(valueItems.map(item => [item.id, item.text]));
-        return answer.map((valueId, index) => {
-            // Extract text after ': ' if present, otherwise use full text
-            const fullText = valueMap.get(valueId) || valueId;
-            const valueText = fullText.includes(': ') ? fullText.split(': ')[1] : fullText;
-            return `${index + 1}. ${valueText}`;
-        }).join('\n'); // Join with newline for display in <pre> or similar
-      }
-      return JSON.stringify(answer); // Fallback
-    default:
-      return JSON.stringify(answer);
-  }
-};
-
-export default function ProfileClientComponent({ userId, userAnswers, allQuestionsMap }: ProfileClientComponentProps) {
-  // State for potential future editing mode
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentAnswers, setCurrentAnswers] = useState(userAnswers);
-
-  // TODO: Implement edit functionality later
+  // Define a type guard for questions with options
+  type QuestionWithOptions = WarmupChoiceQuestion | ScenarioChoiceQuestion | AptitudeQuestion | LearningStyleQuestion;
+  const hasOptions = (q: AssessmentQuestion): q is QuestionWithOptions => 'options' in q;
 
   return (
     <div className="space-y-6">
-      {/* Iterate through all defined questions to maintain order and show unanswered */}
       {Array.from(allQuestionsMap.values()).map((question) => {
-        const answerData = currentAnswers[question.id];
-        const answer = answerData?.answer; // Get the answer value
+        const answerData = userAnswers[question.id];
+        const answer = answerData?.answer;
+        let formattedAnswer: string | React.JSX.Element = "Not Answered";
 
-        // Skip follow-up enjoyment questions if their parent challenge wasn't answered? Or show as unanswered.
-        // For now, show all questions defined.
+        if (answer !== undefined && answer !== null) {
+            switch (question.inputType) {
+                case 'multiple_choice':
+                case 'scenario_choice':
+                  if (hasOptions(question)) {
+                    const chosenOption = question.options.find((opt: ChoiceOption) => opt.id === answer);
+                    formattedAnswer = chosenOption ? chosenOption.text : `Unknown Option (${answer})`;
+                  } else {
+                    formattedAnswer = `Error: Options missing`;
+                  }
+                  break;
+                case 'likert':
+                  const likertQuestion = question as LikertQuestion;
+                  const scale = scales[likertQuestion.scaleType];
+                  const scaleOption = scale?.find(opt => opt.value === Number(answer));
+                  formattedAnswer = scaleOption ? `${scaleOption.label} (${answer})` : `Invalid Value (${answer})`;
+                  break;
+                case 'mini_challenge_text':
+                case 'textarea':
+                  formattedAnswer = String(answer);
+                  break;
+                case 'mini_challenge_textarea':
+                   const text = String(answer);
+                   formattedAnswer = text.length > 100 ? text.substring(0, 100) + '...' : text;
+                   break;
+                case 'value_ranking':
+                  if (Array.isArray(answer)) {
+                    const valueMap = new Map(valueItems.map(item => [item.id, item.text]));
+                    formattedAnswer = answer.map((valueId: string, index: number) => {
+                        const fullText = valueMap.get(valueId) || valueId;
+                        const valueText = fullText.includes(': ') ? fullText.split(': ')[1] : fullText;
+                        return `${index + 1}. ${valueText}`;
+                    }).join('\n');
+                  } else {
+                    formattedAnswer = JSON.stringify(answer);
+                  }
+                  break;
+                // No default case needed if union type is correct
+            }
+        }
 
         return (
           <div key={question.id} className="rounded border border-gray-200 p-4 dark:border-gray-700">
             <Label className="mb-2 block text-sm font-medium text-gray-600 dark:text-gray-300">
               {question.text}
             </Label>
-            <div className="text-sm text-gray-800 dark:text-gray-100">
-              {formatAnswer(question, answer)}
-            </div>
-            {/* Placeholder for Edit Button */}
-            {/* <Button variant="outline" size="sm" className="mt-2" onClick={() => alert('Edit not implemented yet')}>Edit</Button> */}
+            {question.inputType === 'value_ranking' ? (
+              <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-100">
+                {formattedAnswer}
+              </pre>
+            ) : (
+              <div className="text-sm text-gray-800 dark:text-gray-100">
+                {formattedAnswer}
+              </div>
+            )}
           </div>
         );
       })}
-
-      {/* Placeholder for Save Button (when editing) */}
-      {/* {isEditing && <Button>Save Changes</Button>} */}
     </div>
   );
 }

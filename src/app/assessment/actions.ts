@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { type SupabaseClient } from '@supabase/supabase-js' // Import type from main package
 import { revalidatePath } from 'next/cache'
 import OpenAI from 'openai';
 
@@ -10,9 +11,7 @@ import {
     type ScenarioChoiceQuestion,
     type AptitudeQuestion,
     type LearningStyleQuestion,
-    type LikertQuestion,
-    type ChoiceOption,
-    type SectionId,
+    // Removed unused: LikertQuestion, ChoiceOption, SectionId
     valueItems // Import valueItems for prompt helper
 } from './assessmentData';
 
@@ -27,15 +26,17 @@ interface BadgeData {
     }
 }
 
+// Define a more specific type for response data if possible, or use Record<string, any>
+type ResponseData = Record<string, number | string | string[]>;
+
 interface VocationalResponsePayload {
   userId: string;
   assessmentId?: string;
-  sectionId: string;
-  responseData: any;
+  sectionId: string; // Keep SectionId from assessmentData if needed elsewhere, or use string here
+  responseData: ResponseData; // Use defined type
 }
 
 // --- Function to save raw answers per section ---
-// Unchanged from previous version
 export async function saveVocationalResponse({
   userId,
   assessmentId = 'main_vocational',
@@ -54,10 +55,14 @@ export async function saveVocationalResponse({
       .select().single()
     if (error) throw error
     console.log(`Vocational response saved for user ${userId}, section ${sectionId}:`, data)
-    revalidatePath('/results') // Revalidate results page after saving any section
+    revalidatePath('/results')
 
     // --- Start Gamification Logic ---
-    const sectionPoints = 50; let newlyEarnedBadges: BadgeData[] = []; let finalPoints = 0; let finalLevel = 1;
+    const sectionPoints = 50;
+    // Use const as it's only pushed to, not reassigned
+    const newlyEarnedBadges: BadgeData[] = [];
+    let finalPoints = 0;
+    let finalLevel = 1;
     try {
         const [progressResult, badgesResult] = await Promise.all([
             supabase.from('user_progress').select('points, level, earned_badge_ids').eq('user_id', userId).single(),
@@ -82,14 +87,28 @@ export async function saveVocationalResponse({
         const { error: updateProgressError } = await supabase.from('user_progress').update({ points: finalPoints, level: finalLevel, earned_badge_ids: finalBadgeIds, updated_at: new Date().toISOString() }).eq('user_id', userId);
         if (updateProgressError) throw updateProgressError;
         console.log(`User ${userId} progress updated for section ${sectionId}. Points: ${finalPoints}, Level: ${finalLevel}, New Badges: ${newlyEarnedBadges.map(b => b.name).join(', ')}`);
-    } catch (gamificationError: any) { console.error(`Error during gamification update for user ${userId}, section ${sectionId}:`, gamificationError.message); }
+    } catch (gamificationError: unknown) { // Type error as unknown
+         const message = gamificationError instanceof Error ? gamificationError.message : String(gamificationError);
+         console.error(`Error during gamification update for user ${userId}, section ${sectionId}:`, message);
+    }
     // --- End Gamification Logic ---
     return { success: true, savedResponse: data, pointsAwarded: sectionPoints, newBadges: newlyEarnedBadges.map(b => ({ id: b.id, name: b.name })) };
-  } catch (error: any) { console.error(`Error saving vocational response for user ${userId}, section ${sectionId}:`, error.message); return { error: error.message } }
+  } catch (error: unknown) { // Type error as unknown
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error saving vocational response for user ${userId}, section ${sectionId}:`, message);
+    return { error: message }
+  }
+}
+
+// Define type for raw response row
+interface RawResponseRow {
+    section_id: string;
+    response_data: ResponseData | null;
 }
 
 // --- Helper Function to fetch and format data for prompts ---
-async function getAssessmentDataForPrompt(userId: string, assessmentId: string, supabase: any) {
+// Added specific type for supabase client
+async function getAssessmentDataForPrompt(userId: string, assessmentId: string, supabase: SupabaseClient) {
     const [responsesResult, profileResult] = await Promise.all([
       supabase.from('vocational_responses').select('section_id, response_data').eq('user_id', userId).eq('assessment_id', assessmentId),
       supabase.from('user_assessment_profiles').select('riasec_scores, personality_scores, aptitude_scores, work_values, learning_style').eq('user_id', userId).limit(1).single()
@@ -106,17 +125,17 @@ async function getAssessmentDataForPrompt(userId: string, assessmentId: string, 
         promptData += `- RIASEC Scores (Interests - Realistic, Investigative, Artistic, Social, Enterprising, Conventional): ${JSON.stringify(profile.riasec_scores || 'Not calculated')}\n`;
         promptData += `- Personality (Big Five - Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism): ${JSON.stringify(profile.personality_scores || 'Not calculated')}\n`;
         promptData += `- Aptitude Scores (Correct answers): ${JSON.stringify(profile.aptitude_scores || 'Not calculated')}\n`;
-        // Format ranked values better
         const rankedValuesText = profile.work_values?.ranked?.map((id: string) => {
             const item = valueItems.find(v => v.id === id);
-            return item?.text.split(': ')[1] || id; // Get text after ': '
+            return item?.text.split(': ')[1] || id;
         }).join(', ') || 'Not ranked';
         promptData += `- Top Work Values (Ranked): ${rankedValuesText}\n`;
         promptData += `- Preferred Learning Style (VARK): ${profile.learning_style || 'Not determined'}\n\n`;
     } else { promptData += `(Calculated profile data was not available or failed to load.)\n\n`; }
 
     promptData += `**2. Raw Answers Provided by Student:**\n`;
-    responses.forEach((res: any) => {
+    // Added type for res
+    responses.forEach((res: RawResponseRow) => {
       promptData += `- Section: ${res.section_id}\n`;
       promptData += `  Responses: ${res.response_data ? JSON.stringify(res.response_data) : '[No data]'}\n`;
     });
@@ -124,7 +143,6 @@ async function getAssessmentDataForPrompt(userId: string, assessmentId: string, 
 }
 
 // --- Function to Prepare the STRUCTURED REPORT AI Prompt ---
-// (Removed story section instructions)
 export async function prepareAnalysisPrompt(userId: string, assessmentId: string = 'main_vocational') {
   const supabase = await createClient();
   try {
@@ -176,14 +194,18 @@ ${promptData}
 *   Maintain a positive, encouraging, and supportive tone throughout.
 *   **Crucially, base all analysis strictly on the provided data.** Do not add external information or make assumptions. Acknowledge if data (like calculated scores) was unavailable.`;
     return { success: true, prompt: analysisPrompt };
-  } catch (error: any) { console.error(`Error preparing analysis prompt for user ${userId}:`, error.message); return { error: error.message } }
+  } catch (error: unknown) { // Type error as unknown
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error preparing analysis prompt for user ${userId}:`, message);
+    return { error: message }
+  }
 }
 
 // --- NEW Function to Prepare the NARRATIVE STORY AI Prompt ---
 export async function prepareStoryPrompt(userId: string, assessmentId: string = 'main_vocational') {
   const supabase = await createClient();
   try {
-    const promptData = await getAssessmentDataForPrompt(userId, assessmentId, supabase); // Reuse data fetching
+    const promptData = await getAssessmentDataForPrompt(userId, assessmentId, supabase);
     const storyPrompt = `You are YOUNI, a creative and insightful career storyteller AI. Your task is to analyze the following vocational assessment data for a high school student (user ID: ${userId}) and write an engaging, personalized narrative (story) that weaves together their key results. This story should be separate from a structured report and focus on making the results feel relatable and inspiring.
 
 **Assessment Data Provided:**
@@ -199,59 +221,100 @@ ${promptData}
 *   **Length:** Aim for 4-6 paragraphs.
 *   **Output:** Provide *only* the narrative story text, without any introductory/concluding remarks outside the story itself. Do not include headings within the story.`;
     return { success: true, prompt: storyPrompt };
-  } catch (error: any) { console.error(`Error preparing story prompt for user ${userId}:`, error.message); return { error: error.message } }
+  } catch (error: unknown) { // Type error as unknown
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error preparing story prompt for user ${userId}:`, message);
+    return { error: message }
+  }
 }
 
 // --- Updated Function to Save Analysis Result (including story) ---
 export async function saveAnalysisResult(
     userId: string,
-    analysisText: string | null, // Structured report text
-    narrativeStory: string | null, // Narrative story text
-    analysisSuccess: boolean, // Overall success of generating *both* parts (or at least the main report)
+    analysisText: string | null,
+    narrativeStory: string | null,
+    analysisSuccess: boolean,
     assessmentId: string = 'main_vocational'
 ) {
     if (!userId) { console.error('Missing userId for saving result.'); return { error: 'Missing required data to save analysis.' }; }
     const supabase = await createClient();
     try {
+        // Define type for the data being upserted
+        type VocationalResultUpsert = {
+            user_id: string;
+            assessment_id: string;
+            riasec_scores?: any; // Using any temporarily, should match DB type (jsonb)
+            strengths_analysis?: string | null;
+            areas_for_development?: string | null;
+            potential_contradictions?: string | null;
+            full_ai_analysis: { raw_response: string; generated_at: string; success: boolean; };
+            narrative_story: string;
+            updated_at: string;
+        };
+
+        const upsertData: VocationalResultUpsert = {
+            user_id: userId,
+            assessment_id: assessmentId,
+            riasec_scores: null,
+            strengths_analysis: null,
+            areas_for_development: null,
+            potential_contradictions: null,
+            full_ai_analysis: {
+                raw_response: analysisText ?? "Structured report generation failed.",
+                generated_at: new Date().toISOString(),
+                success: analysisSuccess,
+            },
+            narrative_story: narrativeStory ?? "Personalized story generation failed.",
+            updated_at: new Date().toISOString(),
+        };
+
         const { data: savedResult, error: saveError } = await supabase
             .from('vocational_results')
-            .upsert( {
-                    user_id: userId,
-                    assessment_id: assessmentId,
-                    riasec_scores: null, // Clear old placeholders if they existed
-                    strengths_analysis: null,
-                    areas_for_development: null,
-                    potential_contradictions: null,
-                    full_ai_analysis: { // Store structured report here
-                        raw_response: analysisText ?? "Structured report generation failed.",
-                        generated_at: new Date().toISOString(),
-                        success: analysisSuccess, // Reflects if structured report part was successful
-                    },
-                    narrative_story: narrativeStory ?? "Personalized story generation failed.", // Save narrative story
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: 'user_id, assessment_id' } )
+            .upsert(upsertData, { onConflict: 'user_id, assessment_id' })
             .select().single();
+
         if (saveError) throw saveError;
         console.log(`Analysis result and story saved/updated for user ${userId}:`, savedResult);
         revalidatePath('/results');
         return { success: true, savedResult };
-    } catch (error: any) { console.error(`Error saving analysis result/story for user ${userId}:`, error.message); return { error: error.message }; }
+    } catch (error: unknown) { // Type error as unknown
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`Error saving analysis result/story for user ${userId}:`, message);
+        return { error: message };
+    }
 }
 
 // --- Function to Calculate and Save Structured Profile ---
-// Unchanged - calculates scores used by prompt functions
+// Define type for the profile data being upserted
+type UserProfileUpsert = {
+    user_id: string;
+    assessment_session_id?: string | null;
+    riasec_scores: Record<string, number>;
+    personality_scores: Record<string, number>;
+    aptitude_scores: { verbalCorrect: number; numericalCorrect: number; abstractCorrect: number; totalCorrect: number; totalAttempted: number; };
+    work_values?: { ranked: string[]; } | null;
+    learning_style: string;
+    raw_responses_snapshot?: Record<string, any>; // Use Record<string, any> for flexibility
+    updated_at: string;
+};
+
 export async function generateAndSaveAssessmentProfile(userId: string, assessmentId: string = 'main_vocational') {
   if (!userId) { console.error('Missing userId for profile generation.'); return { error: 'User ID is required for profile generation.' } }
   const supabase = await createClient()
   try {
-    const { data: rawResponses, error: fetchError } = await supabase.from('vocational_responses').select('section_id, response_data').eq('user_id', userId).eq('assessment_id', assessmentId);
+    const { data: rawResponsesData, error: fetchError } = await supabase.from('vocational_responses').select('section_id, response_data').eq('user_id', userId).eq('assessment_id', assessmentId);
+    const rawResponses = rawResponsesData as RawResponseRow[] | null; // Cast fetched data
     if (fetchError) throw fetchError;
     if (!rawResponses || rawResponses.length === 0) { return { error: 'No vocational responses found to generate profile.' }; }
+
+    // Use Record<string, any> for allAnswers
     const allAnswers: Record<string, any> = rawResponses.reduce((acc, section) => { if (section.response_data && typeof section.response_data === 'object') { Object.assign(acc, section.response_data); } else { console.warn(`Unexpected response_data format for section ${section.section_id}:`, section.response_data); } return acc; }, {});
+
     const riasecScores: Record<string, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
     const personalityScores: Record<string, number> = { O: 0, C: 0, E: 0, A: 0, N: 0 };
     const aptitudeScores = { verbalCorrect: 0, numericalCorrect: 0, abstractCorrect: 0, totalAttempted: 0 };
     const learningStyleCounts: Record<string, number> = { V: 0, A: 0, R: 0, K: 0 };
+
     allQuestions.forEach((question: AssessmentQuestion) => {
         const answer = allAnswers[question.id]; if (answer === undefined || answer === null) { return; }
         if (question.sectionId === 'interests' && question.inputType === 'scenario_choice') { const scenarioQuestion = question as ScenarioChoiceQuestion; const chosenOption = scenarioQuestion.options.find(opt => opt.id === answer); if (chosenOption?.theme && riasecScores.hasOwnProperty(chosenOption.theme)) { riasecScores[chosenOption.theme]++; } }
@@ -259,16 +322,35 @@ export async function generateAndSaveAssessmentProfile(userId: string, assessmen
         if (question.sectionId === 'aptitude' && question.inputType === 'multiple_choice') { const aptitudeQuestion = question as AptitudeQuestion; aptitudeScores.totalAttempted++; if (answer === aptitudeQuestion.correctAnswerId) { if (question.id.startsWith('apt_verbal')) aptitudeScores.verbalCorrect++; else if (question.id.startsWith('apt_numerical')) aptitudeScores.numericalCorrect++; else if (question.id.startsWith('apt_abstract')) aptitudeScores.abstractCorrect++; } }
         if (question.sectionId === 'learning_style' && question.inputType === 'multiple_choice') { const lsQuestion = question as LearningStyleQuestion; const chosenOption = lsQuestion.options.find(opt => opt.id === answer); if (chosenOption?.learningStyle && learningStyleCounts.hasOwnProperty(chosenOption.learningStyle)) { learningStyleCounts[chosenOption.learningStyle]++; } }
     });
+
     const finalAptitudeScores = { verbalCorrect: aptitudeScores.verbalCorrect, numericalCorrect: aptitudeScores.numericalCorrect, abstractCorrect: aptitudeScores.abstractCorrect, totalCorrect: aptitudeScores.verbalCorrect + aptitudeScores.numericalCorrect + aptitudeScores.abstractCorrect, totalAttempted: aptitudeScores.totalAttempted };
-    let dominantLearningStyles: string[] = []; let maxCount = 0; for (const style in learningStyleCounts) { if (learningStyleCounts[style] > maxCount) { maxCount = learningStyleCounts[style]; dominantLearningStyles = [style]; } else if (learningStyleCounts[style] === maxCount && maxCount > 0) { dominantLearningStyles.push(style); } } const styleMap: Record<string, string> = { V: 'Visual', A: 'Auditory', R: 'Read/Write', K: 'Kinesthetic' }; const learningStyleResult = dominantLearningStyles.map(s => styleMap[s] || s).join('/');
-    const workValuesResult: string[] | null = (allAnswers['value_ranking_top3'] && Array.isArray(allAnswers['value_ranking_top3'])) ? allAnswers['value_ranking_top3'] : null;
-    console.log("Calculated RIASEC:", riasecScores); console.log("Calculated Personality:", personalityScores); console.log("Calculated Aptitude:", finalAptitudeScores); console.log("Determined Learning Style:", learningStyleResult); console.log("Processed Work Values:", workValuesResult);
-    const { data: savedProfile, error: saveError } = await supabase.from('user_assessment_profiles').upsert( { user_id: userId, assessment_session_id: null, riasec_scores: riasecScores, personality_scores: personalityScores, aptitude_scores: finalAptitudeScores, work_values: workValuesResult ? { ranked: workValuesResult } : null, learning_style: learningStyleResult, raw_responses_snapshot: allAnswers, updated_at: new Date().toISOString() }, { onConflict: 'user_id' } ).select().single();
+    let dominantLearningStyles: string[] = []; let maxCount = 0; for (const style in learningStyleCounts) { if (learningStyleCounts[style] > maxCount) { maxCount = learningStyleCounts[style]; dominantLearningStyles = [style]; } else if (learningStyleCounts[style] === maxCount && maxCount > 0) { dominantLearningStyles.push(style); } } const styleMap: Record<string, string> = { V: 'Visual', A: 'Auditory', R: 'Read/Write', K: 'Kinesthetic' }; const learningStyleResult = dominantLearningStyles.map(s => styleMap[s] || s).join('/') || 'Not determined';
+    const workValuesRanked: string[] | null = (allAnswers['value_ranking_top3'] && Array.isArray(allAnswers['value_ranking_top3'])) ? allAnswers['value_ranking_top3'] : null;
+
+    console.log("Calculated RIASEC:", riasecScores); console.log("Calculated Personality:", personalityScores); console.log("Calculated Aptitude:", finalAptitudeScores); console.log("Determined Learning Style:", learningStyleResult); console.log("Processed Work Values:", workValuesRanked);
+
+    const profileUpsertData: UserProfileUpsert = {
+        user_id: userId,
+        assessment_session_id: null,
+        riasec_scores: riasecScores,
+        personality_scores: personalityScores,
+        aptitude_scores: finalAptitudeScores,
+        work_values: workValuesRanked ? { ranked: workValuesRanked } : null,
+        learning_style: learningStyleResult,
+        raw_responses_snapshot: allAnswers,
+        updated_at: new Date().toISOString()
+    };
+
+    const { data: savedProfile, error: saveError } = await supabase.from('user_assessment_profiles').upsert(profileUpsertData, { onConflict: 'user_id' }).select().single();
     if (saveError) throw saveError;
     console.log(`Assessment profile generated and saved/updated for user ${userId}:`, savedProfile);
     revalidatePath('/results');
     return { success: true, profile: savedProfile };
-  } catch (error: any) { console.error(`Error generating/saving assessment profile for user ${userId}:`, error.message); return { error: error.message }; }
+  } catch (error: unknown) { // Type error as unknown
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error generating/saving assessment profile for user ${userId}:`, message);
+    return { error: message };
+  }
 }
 
 
@@ -281,14 +363,15 @@ export async function generateAndSaveAssessmentAnalysis(userId: string, assessme
     const profileResult = await generateAndSaveAssessmentProfile(userId, assessmentId);
     if (profileResult.error) {
       console.error(`Profile generation failed before AI analysis could start: ${profileResult.error}`);
-      await saveAnalysisResult(userId, `Error: Prerequisite profile calculation failed - ${profileResult.error}`, null, false, assessmentId); // Save error state
+      await saveAnalysisResult(userId, `Error: Prerequisite profile calculation failed - ${profileResult.error}`, null, false, assessmentId);
       return { success: false, error: `Prerequisite profile calculation failed: ${profileResult.error}`, analysis: null };
     }
     console.log("Structured profile generated/updated successfully before AI analysis.");
-  } catch (profileError: any) {
-    console.error(`Unexpected error during profile generation step: ${profileError.message}`);
-    await saveAnalysisResult(userId, `Error: Unexpected error during prerequisite profile calculation - ${profileError.message}`, null, false, assessmentId); // Save error state
-    return { success: false, error: `Unexpected error during profile calculation: ${profileError.message}`, analysis: null };
+  } catch (profileError: unknown) { // Type error as unknown
+    const message = profileError instanceof Error ? profileError.message : String(profileError);
+    console.error(`Unexpected error during profile generation step: ${message}`);
+    await saveAnalysisResult(userId, `Error: Unexpected error during prerequisite profile calculation - ${message}`, null, false, assessmentId);
+    return { success: false, error: `Unexpected error during profile calculation: ${message}`, analysis: null };
   }
 
   // 2. --- Prepare Prompts ---
@@ -298,7 +381,6 @@ export async function generateAndSaveAssessmentAnalysis(userId: string, assessme
   let structuredReportPrompt: string | undefined;
   let narrativeStoryPrompt: string | undefined;
   try {
-    // Prepare prompts in parallel
     const [analysisPromptResult, storyPromptResult] = await Promise.all([
         prepareAnalysisPrompt(userId, assessmentId),
         prepareStoryPrompt(userId, assessmentId)
@@ -307,17 +389,18 @@ export async function generateAndSaveAssessmentAnalysis(userId: string, assessme
     structuredReportPrompt = analysisPromptResult.prompt;
     if (storyPromptResult.error || !storyPromptResult.prompt) { throw new Error(storyPromptResult.error || 'Failed to prepare narrative story prompt.'); }
     narrativeStoryPrompt = storyPromptResult.prompt;
-  } catch (promptError: any) {
-      console.error(`Error preparing prompts: ${promptError.message}`);
-      await saveAnalysisResult(userId, `Error preparing prompts: ${promptError.message}`, null, false, assessmentId);
-      return { success: false, error: `Error preparing prompts: ${promptError.message}`, analysis: null };
+  } catch (promptError: unknown) { // Type error as unknown
+      const message = promptError instanceof Error ? promptError.message : String(promptError);
+      console.error(`Error preparing prompts: ${message}`);
+      await saveAnalysisResult(userId, `Error preparing prompts: ${message}`, null, false, assessmentId);
+      return { success: false, error: `Error preparing prompts: ${message}`, analysis: null };
   }
 
   // 3. --- Call OpenAI API (in Parallel) ---
   const openai = new OpenAI({ apiKey });
   let structuredReportText: string | null = null;
   let narrativeStoryText: string | null = null;
-  let overallSuccess = true; // Tracks if the main structured report succeeded
+  let overallSuccess = true;
 
   try {
       console.log(`Sending prompts to OpenAI for user ${userId}...`);
@@ -326,7 +409,6 @@ export async function generateAndSaveAssessmentAnalysis(userId: string, assessme
           openai.chat.completions.create({ messages: [ { role: "system", content: "You are a creative AI storyteller writing a personalized narrative based on assessment results." }, { role: "user", content: narrativeStoryPrompt } ], model: "gpt-3.5-turbo" })
       ]);
 
-      // Process structured report result
       if (reportCompletion.status === 'fulfilled' && reportCompletion.value.choices[0]?.message?.content) {
           structuredReportText = reportCompletion.value.choices[0].message.content;
           console.log(`OpenAI structured report received for user ${userId}.`);
@@ -334,10 +416,9 @@ export async function generateAndSaveAssessmentAnalysis(userId: string, assessme
           const errorMsg = reportCompletion.status === 'rejected' ? (reportCompletion.reason as Error).message : 'Invalid response structure from OpenAI for report.';
           console.error(`Error generating structured report: ${errorMsg}`);
           structuredReportText = `Error generating structured report: ${errorMsg}`;
-          overallSuccess = false; // Mark failure if structured report fails
+          overallSuccess = false;
       }
 
-      // Process narrative story result
       if (storyCompletion.status === 'fulfilled' && storyCompletion.value.choices[0]?.message?.content) {
           narrativeStoryText = storyCompletion.value.choices[0].message.content;
           console.log(`OpenAI narrative story received for user ${userId}.`);
@@ -345,28 +426,27 @@ export async function generateAndSaveAssessmentAnalysis(userId: string, assessme
           const errorMsg = storyCompletion.status === 'rejected' ? (storyCompletion.reason as Error).message : 'Invalid response structure from OpenAI for story.';
           console.error(`Error generating narrative story: ${errorMsg}`);
           narrativeStoryText = `Error generating narrative story: ${errorMsg}`;
-          // Note: overallSuccess remains true even if only the story fails
       }
 
-  } catch (error: any) { // Catch errors from Promise.all itself or OpenAI setup
-      console.error(`Error during OpenAI analysis generation for user ${userId}:`, error.message);
-      structuredReportText = structuredReportText ?? `Error during analysis: ${error.message}`;
-      narrativeStoryText = narrativeStoryText ?? `Error during analysis: ${error.message}`;
+  } catch (error: unknown) { // Type error as unknown
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Error during OpenAI analysis generation for user ${userId}:`, message);
+      structuredReportText = structuredReportText ?? `Error during analysis: ${message}`;
+      narrativeStoryText = narrativeStoryText ?? `Error during analysis: ${message}`;
       overallSuccess = false;
   }
 
   // 4. --- Save Both Results ---
   try {
-    // Pass both texts to the updated save function
     const saveOpResult = await saveAnalysisResult(userId, structuredReportText, narrativeStoryText, overallSuccess, assessmentId);
     if (saveOpResult.error) {
          return { success: false, error: `Failed to save results: ${saveOpResult.error}`, analysis: null };
     }
-    // Return overall success status (based on structured report) and the saved data
     return { success: overallSuccess, analysis: saveOpResult.savedResult, error: !overallSuccess ? "Error during AI generation." : null };
 
-  } catch (error: any) {
-    console.error(`Unexpected error saving analysis result/story for user ${userId}:`, error.message);
-    return { success: false, error: `Unexpected error saving results: ${error.message}` };
+  } catch (error: unknown) { // Type error as unknown
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Unexpected error saving analysis result/story for user ${userId}:`, message);
+    return { success: false, error: `Unexpected error saving results: ${message}` };
   }
 }

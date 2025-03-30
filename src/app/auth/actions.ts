@@ -12,9 +12,20 @@ export async function login(formData: FormData) {
 
   // type-casting here for convenience
   // in practice, you should validate your inputs
-  const data = Object.fromEntries(formData)
+  const data = Object.fromEntries(formData);
 
-  const { error } = await supabase.auth.signInWithPassword(data as any)
+  // Define expected shape for login data
+  const loginData = {
+    email: data.email as string,
+    password: data.password as string,
+  };
+
+  // Basic validation
+  if (!loginData.email || !loginData.password) {
+    return redirect('/login?message=Email and password are required');
+  }
+
+  const { error } = await supabase.auth.signInWithPassword(loginData); // Use typed data
 
   if (error) {
     console.error('Login error:', error.message)

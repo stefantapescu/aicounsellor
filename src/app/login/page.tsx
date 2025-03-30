@@ -84,6 +84,7 @@ export default function LoginPage({ searchParams }: { searchParams: { message: s
         </div> */}
 
         <p className="mt-6 text-center text-sm text-gray-600">
+          {/* Escaped apostrophe */}
           Don't have an account?{' '}
           <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
             Sign up

@@ -1,14 +1,15 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
+// Removed unused: import { revalidatePath } from 'next/cache'
+import { type CoreMessage } from 'ai'; // Import CoreMessage type
 
 interface SaveMessagePayload {
   userId: string;
   role: 'user' | 'assistant';
   content: string;
   sessionId?: string; // Optional: To group conversations
-  metadata?: any;
+  metadata?: Record<string, any>; // Use Record<string, any> for metadata
 }
 
 // Action to save a single chat message
@@ -47,15 +48,17 @@ export async function saveChatMessage({
 
     return { success: true, savedMessage: data }
 
-  } catch (error: any) {
-    console.error(`Error saving chat message for user ${userId}:`, error.message)
-    return { error: error.message }
+  } catch (error: unknown) { // Type error as unknown
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error saving chat message for user ${userId}:`, message)
+    return { error: message }
   }
 }
 
 
 // Action to prepare context and prompt for the AI
-export async function prepareAssistantPrompt(userId: string, currentMessages: any[]) {
+// Use CoreMessage[] for currentMessages type
+export async function prepareAssistantPrompt(userId: string, currentMessages: CoreMessage[]) {
    if (!userId) {
     console.error('Missing userId for assistant prompt preparation.')
     return { error: 'User ID is required.' }
@@ -66,30 +69,33 @@ export async function prepareAssistantPrompt(userId: string, currentMessages: an
   try {
     // --- Fetch Context ---
     // 1. User Profile
+    // Define expected profile type
+    type Profile = { username: string | null; full_name: string | null } | null;
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('username, full_name')
       .eq('user_id', userId)
-      .single();
-    if (profileError) console.warn("Could not fetch profile:", profileError.message);
+      .single<Profile>(); // Apply type
+    if (profileError && profileError.code !== 'PGRST116') console.warn("Could not fetch profile:", profileError.message);
 
     // 2. Vocational Results (Latest)
+    // Define expected results type
+    type VocResults = { riasec_scores: any; strengths_analysis: string | null; areas_for_development: string | null; potential_contradictions: string | null } | null;
     const { data: results, error: resultsError } = await supabase
       .from('vocational_results')
       .select('riasec_scores, strengths_analysis, areas_for_development, potential_contradictions')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
-      .single();
+      .single<VocResults>(); // Apply type
      if (resultsError && resultsError.code !== 'PGRST116') console.warn("Could not fetch results:", resultsError.message);
 
 
     // 3. Recent User Memories (excluding current input, limit context window)
-    // Convert currentMessages (from client state) to a simpler format if needed
     const recentHistory = currentMessages
-        .filter(msg => msg.role === 'user' || msg.role === 'assistant') // Exclude system messages from history context
-        .slice(-6) // Limit to last N interactions (adjust as needed)
-        .map(msg => `${msg.role}: ${msg.content}`)
+        .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+        .slice(-6)
+        .map(msg => `${msg.role}: ${typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}`) // Handle potential non-string content
         .join('\n');
 
 
@@ -112,7 +118,9 @@ export async function prepareAssistantPrompt(userId: string, currentMessages: an
     context += recentHistory ? `${recentHistory}\n\n` : "- No recent history provided.\n\n";
 
     // Get the latest user message from the passed array
-    const latestUserMessage = currentMessages.filter(msg => msg.role === 'user').pop()?.content || "[User message missing]";
+    const latestUserMessageContent = currentMessages.filter(msg => msg.role === 'user').pop()?.content;
+    const latestUserMessage = typeof latestUserMessageContent === 'string' ? latestUserMessageContent : JSON.stringify(latestUserMessageContent) || "[User message missing]";
+
 
     const finalPrompt = `${context}## Current User Question:\nuser: ${latestUserMessage}\n\n## Your Task:\nRespond helpfully and concisely as AI Youni, the AI Educational Consultant, drawing upon the provided user information, assessment summary, and conversation history. Address the user's current question directly. If external knowledge is needed beyond the context, use Perplexity search via available tools.`;
 
@@ -120,8 +128,9 @@ export async function prepareAssistantPrompt(userId: string, currentMessages: an
 
     return { success: true, prompt: finalPrompt };
 
-  } catch (error: any) {
-    console.error(`Error preparing assistant prompt for user ${userId}:`, error.message)
-    return { error: error.message }
+  } catch (error: unknown) { // Type error as unknown
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error preparing assistant prompt for user ${userId}:`, message)
+    return { error: message }
   }
 }

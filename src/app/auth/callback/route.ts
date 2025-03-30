@@ -16,13 +16,16 @@ export async function GET(request: NextRequest) { // Use NextRequest
       {
         cookies: {
           get(name: string) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             return request.cookies.get(name)?.value
           },
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           set(name: string, value: string, options: CookieOptions) {
             // Setting cookies in Route Handlers needs the response object
             // This pattern might need adjustment if setting is required here
             // For exchangeCodeForSession, usually only reading is needed initially
           },
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           remove(name: string, options: CookieOptions) {
              // Setting cookies in Route Handlers needs the response object
           },

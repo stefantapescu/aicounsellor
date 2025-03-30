@@ -6,19 +6,15 @@ import remarkGfm from 'remark-gfm';
 import { generateAndSaveAssessmentAnalysis } from '@/app/assessment/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// Import Recharts components
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-// Import valueItems for displaying ranked values
 import { valueItems } from '@/app/assessment/assessmentData';
 
-// Define the structure of the report data passed from the server
 interface ReportData {
-  text: string; // This will hold the structured report text
+  text: string;
   success: boolean;
   updatedAt: string;
 }
 
-// Define the structure of the profile data for type safety
 interface AssessmentProfile {
   riasec_scores: Record<string, number> | null;
   personality_scores: Record<string, number> | null;
@@ -27,10 +23,16 @@ interface AssessmentProfile {
   learning_style: string | null;
 }
 
+interface FullAIAnalysis {
+    raw_response?: string | null;
+    generated_at?: string;
+    success?: boolean;
+}
+
 interface ResultsClientSectionProps {
   userId: string;
   initialReport: ReportData | null;
-  initialStory: string | null; // Add prop for the story text
+  initialStory: string | null;
   profileScores: AssessmentProfile | null;
 }
 
@@ -38,11 +40,7 @@ interface ResultsClientSectionProps {
 
 const RiasecChart = ({ data }: { data: Record<string, number> | null }) => {
   if (!data) return <div className="text-center text-sm text-gray-500">RIASEC data not available.</div>;
-  const chartData = [
-    { subject: 'Realistic', A: data.R || 0, fullMark: 5 }, { subject: 'Investigative', A: data.I || 0, fullMark: 5 },
-    { subject: 'Artistic', A: data.A || 0, fullMark: 5 }, { subject: 'Social', A: data.S || 0, fullMark: 5 },
-    { subject: 'Enterprising', A: data.E || 0, fullMark: 5 }, { subject: 'Conventional', A: data.C || 0, fullMark: 5 },
-  ];
+  const chartData = [ { subject: 'Realistic', A: data.R || 0, fullMark: 5 }, { subject: 'Investigative', A: data.I || 0, fullMark: 5 }, { subject: 'Artistic', A: data.A || 0, fullMark: 5 }, { subject: 'Social', A: data.S || 0, fullMark: 5 }, { subject: 'Enterprising', A: data.E || 0, fullMark: 5 }, { subject: 'Conventional', A: data.C || 0, fullMark: 5 }, ];
   const allZero = chartData.every(item => item.A === 0);
   if (allZero) return <div className="text-center text-sm text-gray-500">RIASEC scores not calculated yet.</div>;
   return (
@@ -60,11 +58,7 @@ const RiasecChart = ({ data }: { data: Record<string, number> | null }) => {
 
 const PersonalityChart = ({ data }: { data: Record<string, number> | null }) => {
    if (!data) return <div className="text-center text-sm text-gray-500">Personality data not available.</div>;
-   const chartData = [
-     { subject: 'Openness', A: data.O || 0, fullMark: 10 }, { subject: 'Consc.', A: data.C || 0, fullMark: 10 },
-     { subject: 'Extraver.', A: data.E || 0, fullMark: 10 }, { subject: 'Agreeable.', A: data.A || 0, fullMark: 10 },
-     { subject: 'Neuroticism (Inv)', A: data.N || 0, fullMark: 10 },
-   ];
+   const chartData = [ { subject: 'Openness', A: data.O || 0, fullMark: 10 }, { subject: 'Consc.', A: data.C || 0, fullMark: 10 }, { subject: 'Extraver.', A: data.E || 0, fullMark: 10 }, { subject: 'Agreeable.', A: data.A || 0, fullMark: 10 }, { subject: 'Neuroticism (Inv)', A: data.N || 0, fullMark: 10 }, ];
     const allZero = chartData.every(item => item.A === 0);
     if (allZero) return <div className="text-center text-sm text-gray-500">Personality scores not calculated yet.</div>;
    return (
@@ -83,10 +77,7 @@ const PersonalityChart = ({ data }: { data: Record<string, number> | null }) => 
 const AptitudeChart = ({ data }: { data: AssessmentProfile['aptitude_scores'] | null }) => {
   if (!data) return <div className="text-center text-sm text-gray-500">Aptitude data not available.</div>;
   if (data.totalAttempted === 0) return <div className="text-center text-sm text-gray-500">No aptitude questions attempted.</div>;
-  const chartData = [
-    { name: 'Verbal', score: data.verbalCorrect || 0 }, { name: 'Numerical', score: data.numericalCorrect || 0 },
-    { name: 'Abstract', score: data.abstractCorrect || 0 },
-  ];
+  const chartData = [ { name: 'Verbal', score: data.verbalCorrect || 0 }, { name: 'Numerical', score: data.numericalCorrect || 0 }, { name: 'Abstract', score: data.abstractCorrect || 0 }, ];
   const maxScorePerCategory = 2;
   return (
     <ResponsiveContainer width="100%" height={250}>
@@ -104,8 +95,9 @@ const AptitudeChart = ({ data }: { data: AssessmentProfile['aptitude_scores'] | 
 
 export default function ResultsClientSection({ userId, initialReport, initialStory, profileScores }: ResultsClientSectionProps) {
   const [report, setReport] = useState<ReportData | null>(initialReport);
-  const [story, setStory] = useState<string | null>(initialStory); // Add state for story
-  const [scores, setScores] = useState<AssessmentProfile | null>(profileScores);
+  const [story, setStory] = useState<string | null>(initialStory);
+  // Scores are passed as props and not expected to change client-side without re-fetching page
+  const [scores] = useState<AssessmentProfile | null>(profileScores);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -114,28 +106,25 @@ export default function ResultsClientSection({ userId, initialReport, initialSto
     setError(null);
     setStatusMessage("Requesting new analysis...");
     startTransition(async () => {
-      // This action now generates both report and story
       const analysisResult = await generateAndSaveAssessmentAnalysis(userId);
       if (!analysisResult.success || analysisResult.error) {
         setError(`Failed to generate new analysis: ${analysisResult.error}`);
         setStatusMessage(null);
-        // Clear old results on failure? Or leave them? Leaving them for now.
-        setReport(prev => prev ? { ...prev, success: false } : null); // Mark report as failed if it existed
+        setReport(prev => prev ? { ...prev, success: false } : null);
       } else {
-        // Update the report state with the new data from the saved result
-        const newAnalysisData = analysisResult.analysis?.full_ai_analysis as any;
+        // Explicitly type newAnalysisData
+        const newAnalysisData: FullAIAnalysis | null | undefined = analysisResult.analysis?.full_ai_analysis;
         const newReportText = newAnalysisData?.raw_response ?? 'Analysis generated, but content is missing.';
-        const newSuccess = newAnalysisData?.success ?? false; // Reflects success of structured report part
-        const newStoryText = analysisResult.analysis?.narrative_story ?? 'Personalized story generation failed.';
+        const newSuccess = newAnalysisData?.success ?? false;
+        // Safely access narrative_story from the analysis result
+        const newStoryText = (analysisResult.analysis as any)?.narrative_story ?? 'Personalized story generation failed.'; // Use 'as any' if type isn't precise
 
         setReport({
           text: newReportText,
           success: newSuccess,
           updatedAt: analysisResult.analysis?.updated_at ?? new Date().toISOString(),
         });
-        setStory(newStoryText); // Update story state
-        // Scores are assumed to be up-to-date from the generateAndSaveAssessmentProfile call within generateAndSaveAssessmentAnalysis
-        // If scores needed refresh, we'd fetch user_assessment_profiles here too.
+        setStory(newStoryText);
         setStatusMessage("New analysis generated successfully!");
       }
     });
@@ -162,11 +151,8 @@ export default function ResultsClientSection({ userId, initialReport, initialSto
       return <p className="mt-6 text-center text-gray-500">No assessment results found. Please complete the assessment first.</p>;
   }
 
-  // --- Render Report with Visuals ---
   return (
     <div className="space-y-8">
-
-        {/* --- Visual Profile Summary --- */}
         <Card>
             <CardHeader><CardTitle>Your Profile at a Glance</CardTitle></CardHeader>
             <CardContent className="space-y-8">
@@ -205,20 +191,17 @@ export default function ResultsClientSection({ userId, initialReport, initialSto
             </CardContent>
         </Card>
 
-        {/* --- Narrative Story Section --- */}
         {story && (
           <Card>
               <CardHeader><CardTitle>Connecting Your Dots: Your Story</CardTitle></CardHeader>
               <CardContent>
                   <div className="prose prose-sm max-w-none dark:prose-invert sm:prose lg:prose-lg xl:prose-xl">
-                     {/* Render the story text using ReactMarkdown */}
                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{story}</ReactMarkdown>
                   </div>
               </CardContent>
           </Card>
         )}
 
-      {/* --- Structured AI Report Section --- */}
       {report && (
           <Card>
               <CardHeader><CardTitle>Detailed Analysis & Suggestions</CardTitle></CardHeader>
@@ -228,7 +211,6 @@ export default function ResultsClientSection({ userId, initialReport, initialSto
                          The previous attempt to generate the structured report encountered an error. Details might be included below, or you can try re-analyzing.
                        </p>
                   )}
-                  {/* Render the structured report text using ReactMarkdown */}
                   <div className="prose prose-sm max-w-none dark:prose-invert sm:prose lg:prose-lg xl:prose-xl">
                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.text}</ReactMarkdown>
                   </div>
@@ -239,7 +221,6 @@ export default function ResultsClientSection({ userId, initialReport, initialSto
           </Card>
       )}
 
-      {/* --- Re-analysis Button --- */}
       <div className="mt-8 text-center">
          <Button
            onClick={handleReanalyze}

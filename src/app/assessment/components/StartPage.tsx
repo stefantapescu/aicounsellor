@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image'; // Assuming you might have a logo
+// Removed unused Image import
 
 interface StartPageProps {
     onStart: () => void; // Function to call when the start button is clicked

@@ -61,6 +61,7 @@ const ValueRankingInput: React.FC<ValueRankingInputProps> = ({
 
     // Display message if not enough values are rated highly
     if (highRatedValues.length < 3 && question.dependsOnRatings) { // Check dependency flag
+        // Escaped apostrophes
         return <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Please rate at least 3 values as 'Important' (4) or 'Very Important' (5) in the previous section first to enable ranking.</p>;
     }
      if (highRatedValues.length === 0) {

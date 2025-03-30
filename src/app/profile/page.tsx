@@ -58,8 +58,8 @@ export default async function ProfilePage() {
       <h1 className="mb-6 border-b pb-4 text-center text-3xl font-bold text-gray-800">
         Your Assessment Answers
       </h1>
-      {/* Render the client component with fetched data */}
-      <ProfileClientComponent userId={user.id} userAnswers={userAnswers} allQuestionsMap={allQuestionsMap} />
+      {/* Render the client component with fetched data - removed userId prop */}
+      <ProfileClientComponent userAnswers={userAnswers} allQuestionsMap={allQuestionsMap} />
     </div>
   );
 }
