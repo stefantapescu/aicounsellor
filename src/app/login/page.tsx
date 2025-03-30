@@ -2,8 +2,13 @@ import Link from 'next/link'
 // Removed unused redirect, oauthSignIn imports
 import { login } from '@/app/auth/actions'
 
+// Define the correct type for page props including searchParams
+interface LoginPageProps {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
 // Make component non-async, remove server-side auth check
-export default function LoginPage({ searchParams }: { searchParams: { message: string } }) {
+export default function LoginPage({ searchParams }: LoginPageProps) {
 
   // Middleware handles redirecting logged-in users away from this page
 
@@ -12,7 +17,7 @@ export default function LoginPage({ searchParams }: { searchParams: { message: s
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
         <h1 className="mb-6 text-center text-2xl font-bold text-gray-800">Log In</h1>
 
-        {searchParams?.message && (
+        {searchParams?.message && typeof searchParams.message === 'string' && (
           <p className="mb-4 rounded bg-red-100 p-3 text-center text-sm text-red-700">
             {searchParams.message}
           </p>
@@ -83,7 +88,7 @@ export default function LoginPage({ searchParams }: { searchParams: { message: s
         </div> */}
         <p className="mt-6 text-center text-sm text-gray-600">
           {/* Escaped apostrophe */}
-          Do not have an account?{' '}
+          Don't have an account?{' '}
           <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
             Sign up
           </Link>
