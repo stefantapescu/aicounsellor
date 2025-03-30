@@ -9,6 +9,7 @@ import { MessageCircle, ClipboardList, Lightbulb } from "lucide-react";
 export default function Home() {
 
   // Removed server-side auth check
+  // Added comment to trigger rebuild
 
   return (
     <div className="flex w-full flex-col items-center">
