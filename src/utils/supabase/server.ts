@@ -14,14 +14,15 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+        // Define as async arrow function, await cookieStore before calling get
+        get: async (name: string) => {
+          return (await cookieStore).get(name)?.value;
         },
-        set(name: string, value: string, options: CookieOptions) {
+        set: (name: string, value: string, options: CookieOptions) => {
           // In Next.js 15, we shouldn't try to modify cookies in a Server Component
           // This is handled by middleware
         },
-        remove(name: string, options: CookieOptions) {
+        remove: (name: string, options: CookieOptions) => {
           // In Next.js 15, we shouldn't try to modify cookies in a Server Component
           // This is handled by middleware
         },
