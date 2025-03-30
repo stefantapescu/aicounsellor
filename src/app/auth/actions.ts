@@ -22,17 +22,21 @@ export async function login(formData: FormData) {
 
   // Basic validation
   if (!loginData.email || !loginData.password) {
+    console.error('Login validation error: Email and password are required'); // Added console log
     return redirect('/login?message=Email and password are required');
   }
 
+  console.log(`Attempting login for: ${loginData.email}`); // Added console log
   const { error } = await supabase.auth.signInWithPassword(loginData); // Use typed data
 
   if (error) {
-    console.error('Login error:', error.message)
-    // Consider returning error message to the UI instead of redirecting
-    return redirect('/login?message=Could not authenticate user')
+    console.error('Supabase Login Error:', error); // Log the full error object
+    // Return specific error message
+    const errorMessage = encodeURIComponent(error.message || 'Unknown authentication error');
+    return redirect(`/login?message=Login failed: ${errorMessage}`);
   }
 
+  console.log(`Login successful for: ${loginData.email}`); // Added console log
   revalidatePath('/', 'layout') // Revalidate all paths after login
   redirect('/dashboard') // Redirect to dashboard after successful login
 }

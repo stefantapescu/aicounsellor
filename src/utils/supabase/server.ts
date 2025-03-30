@@ -17,14 +17,21 @@ export async function createClient() {
         // Define as async arrow function, await cookieStore before calling get
         get: async (name: string) => {
           return (await cookieStore).get(name)?.value;
+          // Ensure cookieStore is awaited if it's a promise (it is with next/headers)
+          const store = await cookieStore;
+          return store.get(name)?.value;
         },
-        set: (name: string, value: string, options: CookieOptions) => {
-          // In Next.js 15, we shouldn't try to modify cookies in a Server Component
-          // This is handled by middleware
+        set: async (name: string, value: string, options: CookieOptions) => {
+          // Ensure cookieStore is awaited and call set
+          // This IS needed for Server Actions to set the auth cookie
+          const store = await cookieStore;
+          store.set({ name, value, ...options });
         },
-        remove: (name: string, options: CookieOptions) => {
-          // In Next.js 15, we shouldn't try to modify cookies in a Server Component
-          // This is handled by middleware
+        remove: async (name: string, options: CookieOptions) => {
+          // Ensure cookieStore is awaited and call set with empty value/delete
+          // This IS needed for Server Actions (like logout) to remove the auth cookie
+          const store = await cookieStore;
+          store.set({ name, value: '', ...options }); // Or store.delete(name, options) if preferred
         },
       },
     }
