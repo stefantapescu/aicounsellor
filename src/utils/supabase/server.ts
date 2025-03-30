@@ -5,8 +5,9 @@ import { cookies } from 'next/headers'
 // It relies on the `cookies()` method from `next/headers`.
 // WARNING: This pattern may show persistent type errors in the editor in this environment,
 // but is the documented approach for server-side usage. Ignore related type errors for now.
+// In Next.js 15, cookies API has changed - this is an updated implementation
 export async function createClient() {
-  const cookieStore = cookies() // Call cookies() at the top level
+  const cookieStore = cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,22 +18,12 @@ export async function createClient() {
           return cookieStore.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          try {
-            // Middleware handles actual setting
-            cookieStore.set(name, value, options)
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          } catch (error) {
-             console.warn(`Server context attempted to set cookie '${name}'. Middleware should handle this.`);
-          }
+          // In Next.js 15, we shouldn't try to modify cookies in a Server Component
+          // This is handled by middleware
         },
         remove(name: string, options: CookieOptions) {
-          try {
-             // Middleware handles actual removal
-            cookieStore.delete(name, options)
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          } catch (error) {
-             console.warn(`Server context attempted to remove cookie '${name}'. Middleware should handle this.`);
-          }
+          // In Next.js 15, we shouldn't try to modify cookies in a Server Component
+          // This is handled by middleware
         },
       },
     }

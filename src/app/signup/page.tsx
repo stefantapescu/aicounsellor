@@ -3,21 +3,11 @@ import Link from 'next/link'
 // Removed unused redirect import
 import { signup } from '@/app/auth/actions'
 
-// Make component non-async, remove server-side auth check
-export default function SignupPage({ searchParams }: { searchParams: { message: string } }) {
-
-  // Middleware handles redirecting logged-in users away from this page
-
+export default function Page() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
         <h1 className="mb-6 text-center text-2xl font-bold text-gray-800">Sign Up</h1>
-
-        {searchParams?.message && (
-          <p className="mb-4 rounded bg-red-100 p-3 text-center text-sm text-red-700">
-            {searchParams.message}
-          </p>
-        )}
 
         <form className="space-y-4">
           {/* Optional: Add Full Name input if needed for profile */}

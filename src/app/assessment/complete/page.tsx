@@ -1,6 +1,6 @@
 'use client' // Make it a client component
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 // Removed unused useRouter
 import { useSearchParams } from 'next/navigation'
@@ -25,9 +25,8 @@ async function checkResults(userId: string): Promise<boolean> {
     return !!data; // Return true if data exists, false otherwise
 }
 
-
-export default function AssessmentCompletePage() {
-  // Removed unused router variable
+// Separate component that uses useSearchParams
+function AssessmentCompleteContent() {
   const searchParams = useSearchParams();
   const initialError = searchParams.get('error'); // Check if analysis failed immediately
 
@@ -92,53 +91,57 @@ export default function AssessmentCompletePage() {
   }, [userId, isLoading, error]); // Rerun effect if userId changes or loading state changes
 
   return (
-    <div className="container mx-auto mt-10 flex min-h-[60vh] items-center justify-center">
-      <div className="w-full max-w-lg rounded-lg bg-white p-8 text-center shadow-xl dark:bg-gray-800">
+    <div className="w-full max-w-lg rounded-lg bg-white p-8 text-center shadow-xl dark:bg-gray-800">
+      {isLoading && !error && (
+        <>
+          <h1 className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">Generating Analysis...</h1>
+          <p className="mb-6 text-gray-600 dark:text-gray-300">
+            {/* Escaped apostrophe */}
+            Thank you for completing the assessment! We are now processing your responses using AI to generate personalized insights. This may take up to a minute.
+          </p>
+          <Progress value={progressValue} className="w-full" />
+           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Please wait...</p>
+        </>
+      )}
 
-        {isLoading && !error && (
-          <>
-            <h1 className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">Generating Analysis...</h1>
-            <p className="mb-6 text-gray-600 dark:text-gray-300">
-              {/* Escaped apostrophe */}
-              Thank you for completing the assessment! We are now processing your responses using AI to generate personalized insights. This may take up to a minute.
-            </p>
-            <Progress value={progressValue} className="w-full" />
-             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Please wait...</p>
-          </>
-        )}
+      {isReady && !error && (
+         <>
+          <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-green-500" />
+          <h1 className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">Analysis Complete!</h1>
+          <p className="mb-6 text-gray-600 dark:text-gray-300">
+            Your personalized vocational assessment results are ready. Explore your strengths, interests, and potential career paths.
+          </p>
+          <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800">
+            <Link href="/results">View My Results</Link>
+          </Button>
+        </>
+      )}
 
-        {isReady && !error && (
-           <>
-            <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-green-500" />
-            <h1 className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">Analysis Complete!</h1>
-            <p className="mb-6 text-gray-600 dark:text-gray-300">
-              Your personalized vocational assessment results are ready. Explore your strengths, interests, and potential career paths.
-            </p>
-            <Button asChild size="lg" className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800">
-              <Link href="/results">View My Results</Link>
-            </Button>
-          </>
-        )}
-
-         {error && (
-           <>
-            {/* Added AlertTriangle icon */}
-            <AlertTriangle className="mx-auto mb-4 h-16 w-16 text-red-500" />
-            <h1 className="mb-4 text-2xl font-bold text-red-600 dark:text-red-400">Analysis Failed</h1>
-            <p className="mb-6 text-gray-600 dark:text-gray-300">
-              {error}
-            </p>
-            <Button asChild variant="outline">
-              <Link href="/dashboard">Go to Dashboard</Link>
-            </Button>
-             {/* Optionally add a retry button? */}
-          </>
-        )}
-
-         {/* Fallback state removed as it's covered by isLoading/isReady/error logic */}
-         {/* {!isLoading && !isReady && !error && ( ... )} */}
-
-      </div>
+       {error && (
+         <>
+          {/* Added AlertTriangle icon */}
+          <AlertTriangle className="mx-auto mb-4 h-16 w-16 text-red-500" />
+          <h1 className="mb-4 text-2xl font-bold text-red-600 dark:text-red-400">Analysis Failed</h1>
+          <p className="mb-6 text-gray-600 dark:text-gray-300">
+            {error}
+          </p>
+          <Button asChild variant="outline">
+            <Link href="/dashboard">Go to Dashboard</Link>
+          </Button>
+           {/* Optionally add a retry button? */}
+        </>
+      )}
     </div>
-  )
+  );
+}
+
+// Main component that doesn't directly use useSearchParams
+export default function AssessmentCompletePage() {
+  return (
+    <div className="container mx-auto mt-10 flex min-h-[60vh] items-center justify-center">
+      <Suspense fallback={<div>Loading...</div>}>
+        <AssessmentCompleteContent />
+      </Suspense>
+    </div>
+  );
 }
