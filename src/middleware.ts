@@ -1,54 +1,20 @@
 import { type NextRequest, NextResponse } from 'next/server'
-// Removed unused updateSession import
-import { createServerClient, type CookieOptions } from '@supabase/ssr' // Import directly
+import { updateSession } from '@/utils/supabase/middleware' // Import the helper
+import { createClient } from '@/utils/supabase/server' // Import server client for auth check
 
 export async function middleware(request: NextRequest) {
-  // update user's auth session using the helper
-  // This response object is essential for setting cookies correctly.
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
+  // 1. Update the session and get the response object
+  const response = await updateSession(request)
 
-  // Create a Supabase client configured to use cookies
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          // If the cookie is set, update the request and response cookies.
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request }) // Recreate response with updated request cookies
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          // If the cookie is removed, update the request and response cookies.
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request }) // Recreate response with updated request cookies
-          response.cookies.set({ name, value: '', ...options })
-        },
-      },
-    }
-  )
-
-
-  // Refresh session if expired - important for Server Components
-  // Must be called AFTER creating the client and BEFORE accessing `auth.getUser()`
-   await supabase.auth.getUser()
-
-
-  // Check auth state AFTER potentially refreshing the session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // 2. Check authentication status using a server client AFTER session update
+  //    (Note: Creating another client here is necessary because the one in updateSession
+  //     might not reflect the *final* state after potential cookie updates within updateSession itself)
+  const supabase = await createClient() // Use the server helper from utils/supabase/server.ts and AWAIT it
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
 
+  // 3. Apply redirect logic based on auth status and path
   // Auth condition: If user is not logged in and tries to access protected routes
   if (!user && pathname.startsWith('/dashboard')) { // Add other protected routes as needed
     const url = request.nextUrl.clone()
