@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/client' // Use client-side helper
-import { Button } from '@/components/ui/button' // Use shadcn Button
+import { createClient } from '@/utils/supabase/client'
+import { Button } from '@/components/ui/button'
+import type { User } from '@supabase/supabase-js'; // Import User type
 
 export function AuthAwareLinks() {
-  const [user, setUser] = useState<any>(null);
+  // Use the imported User type, allowing null
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

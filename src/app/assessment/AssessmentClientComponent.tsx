@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useTransition, useEffect } from 'react'
+// Removed unused useEffect import
+import React, { useState, useTransition } from 'react'
 // Restore original AI analysis action import
 import { saveVocationalResponse, generateAndSaveAssessmentAnalysis } from './actions'
 // Removed: import { generateAndSaveAssessmentProfile } from './actions'
@@ -356,6 +357,7 @@ export default function AssessmentClientComponent({ userId }: AssessmentClientCo
                                         disabled={isPending || answers[currentQuestion.id] === undefined}
                                         className="bg-pink-600 hover:bg-pink-700 text-white dark:bg-pink-700 dark:hover:bg-pink-800"
                                     >
+                                        {/* Escaped apostrophe */}
                                         {isPending ? 'Finishing...' : 'Finish Assessment'}
                                         <Check className="ml-1 h-4 w-4" />
                                     </Button>

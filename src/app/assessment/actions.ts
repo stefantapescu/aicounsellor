@@ -54,7 +54,8 @@ export async function saveVocationalResponse({
       .select().single()
     if (error) throw error
     console.log(`Vocational response saved for user ${userId}, section ${sectionId}:`, data)
-    revalidatePath('/results')
+    revalidatePath('/results') // Revalidate results page after saving any section
+
     // --- Start Gamification Logic ---
     const sectionPoints = 50; let newlyEarnedBadges: BadgeData[] = []; let finalPoints = 0; let finalLevel = 1;
     try {
