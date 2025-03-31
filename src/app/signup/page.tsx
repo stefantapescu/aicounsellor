@@ -63,6 +63,10 @@ export default function Page() {
               required
             />
           </div>
+          {/* Add note about email confirmation */}
+          <p className="text-center text-xs text-gray-500">
+            You will receive an email to confirm your account.
+          </p>
           <button
             formAction={signup}
             className="w-full rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
