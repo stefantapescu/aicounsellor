@@ -75,9 +75,9 @@ export async function signup(formData: FormData) {
 
   // If email confirmation is required, redirect to a confirmation pending page
   // Otherwise, Supabase might automatically log the user in, or you might log them in manually
-  // For now, assume auto-login or redirect to login after signup
+  // Redirect to login page with a message indicating email confirmation is needed
   revalidatePath('/', 'layout')
-  redirect('/login?message=Signup successful! Please log in.') // Or redirect to dashboard if auto-logged in
+  redirect('/login?message=Signup successful! Check your email to confirm your account before logging in.')
 }
 
 export async function logout() {
