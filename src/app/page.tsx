@@ -1,24 +1,23 @@
-// Removed unused Link, AuthAwareLinks imports
-// Removed server-side auth imports: cookies, createServerClient
-import { AIEducationHero } from '@/components/ai-education-hero'
-import { Features } from '@/components/ui/features'
-import { HowItWorksSection } from '@/components/ui/how-it-works'
-import { MessageCircle, ClipboardList, Lightbulb } from "lucide-react";
+// import { AIEducationHero } from '@/components/ai-education-hero'
+// import { Features } from '@/components/ui/features'
+// import { HowItWorksSection } from '@/components/ui/how-it-works'
+// import { MessageCircle, ClipboardList, Lightbulb } from "lucide-react";
 
 // Make the component non-async as auth check is moved to client
 export default function Home() {
+  // Return a minimal page to test deployment
+  return (
+    <div>
+      <h1>Test Page</h1>
+      <p>If you see this, the basic deployment works.</p>
+    </div>
+  );
 
-  // Removed server-side auth check
-  // Added comment to trigger rebuild
-
+  /*
+  // Original content commented out
   return (
     <div className="flex w-full flex-col items-center">
-      {/* TODO: Add Optional Navigation Bar */}
-
-      {/* Hero Section - Renders AuthAwareLinks internally */}
       <AIEducationHero />
-
-      {/* Features Section */}
       <section id="features" className="w-full bg-gray-50 dark:bg-gray-900 py-16 lg:py-24">
          <Features
             badge="Key Tools"
@@ -43,16 +42,13 @@ export default function Home() {
             ]}
           />
       </section>
-
-      {/* How It Works Section */}
       <section id="how-it-works" className="w-full py-16 lg:py-24">
          <HowItWorksSection />
       </section>
-
-      {/* TODO: Add Footer */}
        <footer className="w-full border-t py-6 text-center text-sm text-gray-500">
          &copy; {new Date().getFullYear()} AI Youni. All rights reserved.
        </footer>
     </div>
   );
+  */
 }
