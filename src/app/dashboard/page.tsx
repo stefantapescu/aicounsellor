@@ -9,20 +9,17 @@ interface UserProgress {
   level: number;
   earned_badge_ids: string[] | null;
 }
-interface BadgeInfo {
-  id: string;
-  name: string;
-  description: string | null;
-  icon_url: string | null;
-}
-// Removed unused VocationalResultStatus type
-// interface VocationalResultStatus {
-//   has_results: boolean;
+// Removed unused BadgeInfo type
+// interface BadgeInfo {
+//   id: string;
+//   name: string;
+//   description: string | null;
+//   icon_url: string | null;
 // }
-interface CompletedQuiz {
-    quiz_id: string;
-    // Add more fields if needed, e.g., total score, completion date
-}
+// Removed unused CompletedQuiz type
+// interface CompletedQuiz {
+//     quiz_id: string;
+// }
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -41,18 +38,20 @@ export default async function DashboardPage() {
     .from('user_progress')
     .select('points, level, earned_badge_ids')
     .eq('user_id', user.id)
-    .single<UserProgress>(); // Specify type
+    .single<UserProgress>();
 
-  const { data: allBadges, error: badgesError } = await supabase
-    .from('badges')
-    .select('id, name, description, icon_url');
+  // Removed unused allBadges fetch
+  // const { data: allBadges, error: badgesError } = await supabase
+  //   .from('badges')
+  //   .select('id, name, description, icon_url');
 
-  if (progressError && progressError.code !== 'PGRST116') { // Ignore 'No rows found' for progress
+  if (progressError && progressError.code !== 'PGRST116') {
     console.error('Error fetching user progress:', progressError.message);
   }
-   if (badgesError) {
-    console.error('Error fetching badges:', badgesError.message);
-  }
+  // Removed badgesError check
+  //  if (badgesError) {
+  //   console.error('Error fetching badges:', badgesError.message);
+  // }
 
   // Check for vocational results
   const { data: vocationalResult, error: vrError } = await supabase
@@ -85,15 +84,14 @@ export default async function DashboardPage() {
       }
     });
   }
-  const completedQuizzes: CompletedQuiz[] = Array.from(uniqueQuizIds).map(id => ({ quiz_id: id }));
+  // Removed completedQuizzes variable assignment
 
 
-  // Filter earned badges
-  const earnedBadgeIds = new Set(progress?.earned_badge_ids || []);
-  const earnedBadges = (allBadges || []).filter(badge => earnedBadgeIds.has(badge.id)) as BadgeInfo[];
+  // Removed earnedBadgeIds variable assignment
+  // const earnedBadgeIds = new Set(progress?.earned_badge_ids || []);
 
   // Define colors based on the image (assuming these are defined in tailwind.config.ts or use defaults)
-  const primaryPurple = 'text-purple-900'; // Example, adjust as needed
+  const primaryPurple = 'text-purple-900';
   const primaryPink = 'bg-pink-600'; // Example for logout button
   const lightBg = 'bg-purple-50'; // Example for overall background
 
@@ -101,15 +99,18 @@ export default async function DashboardPage() {
   return (
     // Use min-h-screen and a light purple background for the whole page
     <div className={`min-h-screen ${lightBg} dark:bg-gray-900 p-4 sm:p-8`}>
-      <div className="container mx-auto max-w-4xl">
+      {/* Removed max-w-4xl to allow content to expand */}
+      <div className="container mx-auto">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-4">
-          <h1 className={`text-4xl font-bold ${primaryPurple} dark:text-purple-200`}>Dashboard</h1>
+          {/* Adjusted title size for responsiveness */}
+          <h1 className={`text-3xl sm:text-4xl font-bold ${primaryPurple} dark:text-purple-200`}>Dashboard</h1>
           <form>
             <button
               formAction={logout}
-              className={`rounded-lg ${primaryPink} px-6 py-2 text-base font-semibold text-white hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-colors`}
+              className={`flex items-center gap-2 rounded-lg ${primaryPink} px-4 sm:px-6 py-2 text-base font-semibold text-white hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-colors`} // Added flex, items-center, gap-2, adjusted padding
             >
+              {/* <ion-icon name="log-out-outline" class="text-xl"></ion-icon> */} {/* Ion-icon removed temporarily */}
               Logout
             </button>
           </form>
@@ -121,9 +122,8 @@ export default async function DashboardPage() {
         <DashboardClientComponent
           userEmail={user.email}
           progress={progress ? { points: progress.points, level: progress.level } : null}
-          // earnedBadges prop removed here
           hasVocationalResults={hasVocationalResults}
-          completedQuizzes={completedQuizzes}
+          // completedQuizzes prop removed here
         />
       </div> {/* Close container div */}
     </div> // Close main div

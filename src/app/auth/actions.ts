@@ -88,12 +88,18 @@ export async function logout() {
     redirect('/login')
 }
 
-// Example OAuth Login (e.g., Google)
-export async function oauthSignIn(provider: 'google' | 'github') { // Add other providers as needed
+// Example OAuth Login - Reads provider from formData
+export async function oauthSignIn(formData: FormData) {
+  const provider = formData.get('provider') as 'google' | 'github' | 'apple' | null; // Read provider from hidden input
+
+  if (!provider) {
+    return redirect('/login?message=OAuth provider not specified');
+  }
+
    // Use server-side client
    const supabase = await createClient() // Await the async helper
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: provider,
+    provider: provider, // Use the provider from formData
     options: {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`, // Ensure this URL is in your Supabase Auth settings
     },

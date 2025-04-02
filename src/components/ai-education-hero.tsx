@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button"; // Re-add Button import
 import Link from "next/link";
-import { Circle } from "lucide-react";
+// Removed lucide-react import
 import { AuthAwareLinks } from "@/app/AuthAwareLinks"; // Import the link component
 
 // Helper component for animated shiny text effect
@@ -167,7 +167,7 @@ export function AIEducationHero() {
             animate="visible"
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-background/[0.03] border border-border mb-8 md:mb-12"
           >
-            <Circle className="h-2 w-2 fill-blue-500/80" />
+            {/* <ion-icon name="ellipse" class="text-blue-500/80 text-[8px]"></ion-icon> */} {/* Ion-icon removed temporarily */}
             <span className="text-sm text-foreground/60 tracking-wide">
               AI Educational Consultant
             </span>

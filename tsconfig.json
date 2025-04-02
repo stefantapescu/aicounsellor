@@ -22,6 +22,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.d.ts", "src/types/**/*.d.ts", ".next/types/**/*.ts"], // Added **/*.d.ts and src/types/**/*.d.ts
+  "exclude": ["node_modules", "supabase/functions/**/*", "ios/**/*"] // Added ios/**/* to exclude
 }

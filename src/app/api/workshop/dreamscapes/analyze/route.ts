@@ -1,9 +1,8 @@
 import { createClient } from '@/utils/supabase/server'; // Use the project's server client utility
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { type DreamscapesAnalysis, type VocationalProfile } from '@/types/profile';
+import { type DreamscapesAnalysis } from '@/types/profile'; // Removed unused VocationalProfile import
 // Removed cookies import as it's not needed for createClient() here
-// import { cookies } from 'next/headers';
 
 // Define the structure for storing responses (matching the table)
 interface DreamscapesDbRecord {
@@ -19,7 +18,7 @@ interface DreamscapesDbRecord {
   completed_at: string | null;
 }
 
-export async function POST(request: Request) {
+export async function POST() { // Removed unused 'request' parameter
   // Correct initialization for API route based on the other working route
   const supabase = await createClient();
 
@@ -35,11 +34,11 @@ export async function POST(request: Request) {
   }
 
    // Note: Using the user's authenticated client. Ensure RLS on 'vocational_profile'
-   // allows the user to upsert their own row. If not, a service_role client is needed.
+   // allows the user to upsert their own row.
 
   try {
     // 2. Fetch the latest Dreamscapes response for the user
-    const { data: latestResponse, error: fetchError } = await supabase // Use awaited client
+    const { data: latestResponse, error: fetchError } = await supabase
       .from('dreamscapes_responses')
       .select('*')
       .eq('user_id', user.id)
@@ -49,17 +48,15 @@ export async function POST(request: Request) {
 
     if (fetchError || !latestResponse) {
       console.error(`Error fetching latest response for user ${user.id}:`, fetchError?.message);
-      // Check if the error is 'PGRST116' (No rows found) which is okay if user hasn't submitted
       if (fetchError?.code === 'PGRST116') {
          return NextResponse.json({ error: 'No workshop responses found to analyze.' }, { status: 404 });
       }
-      // Otherwise, it's a real error
       throw fetchError || new Error('Failed to fetch latest response.');
     }
 
     const { responses } = latestResponse;
 
-    // 3. Get OpenAI API Key (ensure it's set in your server environment variables)
+    // 3. Get OpenAI API Key
     const openAIApiKey = process.env.OPENAI_API_KEY;
     if (!openAIApiKey) {
       console.error('OPENAI_API_KEY server environment variable not set.');
@@ -69,10 +66,10 @@ export async function POST(request: Request) {
 
     // 4. Prepare Prompt
     let analysisInputText = `User Dreams:\n`;
-    responses.dreams.forEach((dream: string, i: number) => { // Added types
-      analysisInputText += `- Dream ${i + 1}: ${dream || 'Not provided'}\n`; // Handle empty dream
+    responses.dreams.forEach((dream: string, i: number) => {
+      analysisInputText += `- Dream ${i + 1}: ${dream || 'Not provided'}\n`;
       const subDreams = responses.subDreams[`dream_${i}`] || [];
-      subDreams.forEach((sd: { vision: string; why: string }, j: number) => { // Added types
+      subDreams.forEach((sd: { vision: string; why: string }, j: number) => {
         analysisInputText += `  - Vision ${j + 1}: ${sd.vision || 'Not provided'}\n`;
         analysisInputText += `    - Why: ${sd.why || 'Not provided'}\n`;
       });
@@ -104,20 +101,19 @@ export async function POST(request: Request) {
        if (!analysisResult || !Array.isArray(analysisResult.themes) || !analysisResult.summary) {
           throw new Error('Invalid JSON structure received from OpenAI.');
        }
-     } catch (parseError: unknown) { // Catch as unknown
+     } catch (parseError: unknown) {
        console.error('Error parsing OpenAI response:', parseError);
        console.error('Raw OpenAI response:', analysisContent);
-       // Check if parseError is an Error object before accessing message
        const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
        throw new Error(`Failed to parse analysis result from OpenAI: ${errorMessage}`);
      }
 
     // 7. Upsert into vocational_profile
-    const { error: upsertError } = await supabase // Use awaited client
+    const { error: upsertError } = await supabase
       .from('vocational_profile')
       .upsert(
         {
-          user_id: user.id, // RLS policy must allow user to upsert their own row
+          user_id: user.id,
           dreamscapes_analysis: analysisResult,
           last_updated: new Date().toISOString(),
         },
@@ -132,7 +128,7 @@ export async function POST(request: Request) {
     console.log(`Manual analysis complete, profile updated for user ${user.id}.`);
     return NextResponse.json({ success: true, message: 'Analysis complete and profile updated.', analysis: analysisResult }, { status: 200 });
 
-  } catch (error) { // Catch block with type checking
+  } catch (error) {
      console.error('Error in manual analyze API route:', error);
      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
      return NextResponse.json({ error: errorMessage }, { status: 500 });

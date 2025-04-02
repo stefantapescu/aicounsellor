@@ -3,17 +3,20 @@
 import React from 'react';
 import { type AssessmentQuestion, type ChoiceOption, scales, valueItems, type WarmupChoiceQuestion, type ScenarioChoiceQuestion, type AptitudeQuestion, type LearningStyleQuestion, type LikertQuestion } from '@/app/assessment/assessmentData';
 import { Label } from '@/components/ui/label';
+import { type VocationalProfile } from '@/types/profile'; // Import VocationalProfile type
 // Removed Card, Badge, and duplicate Label imports
 
 interface ProfileClientComponentProps {
   userAnswers: Record<string, { questionText: string; answer: string | number | string[] }>; // Reverted prop name
   allQuestionsMap: Map<string, AssessmentQuestion>;
+  vocationalProfile: VocationalProfile | null; // Add the vocationalProfile prop
   // Removed dreamscapesAnalysis prop
 }
 
 export default function ProfileClientComponent({
   userAnswers, // Use original prop name
-  allQuestionsMap
+  allQuestionsMap,
+  vocationalProfile // Destructure the new prop
   // Removed dreamscapesAnalysis from destructuring
 }: ProfileClientComponentProps) {
 
@@ -22,13 +25,46 @@ export default function ProfileClientComponent({
   const hasOptions = (q: AssessmentQuestion): q is QuestionWithOptions => 'options' in q; // Reverted function name
 
   return (
-    <div className="space-y-6"> {/* Reverted spacing */}
-      {/* Removed Dreamscapes Analysis Section */}
+    <div className="space-y-8"> {/* Increased spacing */}
 
-       {/* Existing Assessment Answers Section - Reverted title */}
-       {/* <h2 className="text-2xl font-semibold text-gray-800 dark:text-white pt-4 border-t dark:border-gray-700">
+      {/* --- Vocational Profile Summary Section --- */}
+      {vocationalProfile ? (
+        <div className="rounded border border-blue-200 bg-blue-50 p-4 dark:border-blue-700 dark:bg-gray-800">
+          <h2 className="mb-3 text-xl font-semibold text-blue-800 dark:text-blue-300">
+            Vocational Profile Summary
+          </h2>
+          {vocationalProfile.combined_profile_summary ? (
+            <p className="mb-4 text-gray-700 dark:text-gray-300">{vocationalProfile.combined_profile_summary}</p>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400">No combined summary available yet.</p>
+          )}
+
+          {vocationalProfile.dreamscapes_analysis && (
+            <div className="mt-4 space-y-2 border-t border-blue-200 pt-4 dark:border-blue-700">
+              <h3 className="text-lg font-medium text-blue-700 dark:text-blue-400">Dreamscapes Analysis</h3>
+              <p><strong>Themes:</strong> {vocationalProfile.dreamscapes_analysis.themes?.join(', ') || 'N/A'}</p>
+              <p><strong>Values:</strong> {vocationalProfile.dreamscapes_analysis.values?.join(', ') || 'N/A'}</p>
+              <p><strong>Interests:</strong> {vocationalProfile.dreamscapes_analysis.interests?.join(', ') || 'N/A'}</p>
+              <p><strong>Motivators:</strong> {vocationalProfile.dreamscapes_analysis.motivators?.join(', ') || 'N/A'}</p>
+              <p><strong>Summary:</strong> {vocationalProfile.dreamscapes_analysis.summary || 'N/A'}</p>
+            </div>
+          )}
+           <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+            Last Updated: {new Date(vocationalProfile.last_updated).toLocaleString()}
+          </p>
+        </div>
+      ) : (
+         <div className="rounded border border-gray-200 p-4 dark:border-gray-700">
+            <p className="text-gray-500 dark:text-gray-400">Vocational profile data is not yet available.</p>
+         </div>
+      )}
+      {/* --- End Vocational Profile Summary Section --- */}
+
+
+       {/* --- Detailed Assessment Answers Section --- */}
+       <h2 className="border-t pt-6 text-2xl font-semibold text-gray-800 dark:border-gray-700 dark:text-white">
          Detailed Assessment Answers
-       </h2> */}
+       </h2>
       {Array.from(allQuestionsMap.values()).map((question) => {
         const answerData = userAnswers[question.id]; // Use original prop name
         const answer = answerData?.answer;

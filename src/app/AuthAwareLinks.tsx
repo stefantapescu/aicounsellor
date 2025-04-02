@@ -42,17 +42,26 @@ export function AuthAwareLinks() {
          <>
            {/* <p className="text-md text-gray-700 self-center">Logged in</p> */}
            <Button size="lg" asChild>
-             <Link href="/dashboard">Go to Dashboard</Link>
+             <Link href="/dashboard" className="flex items-center gap-2">
+               {/* <ion-icon name="grid-outline" class="text-xl"></ion-icon> */} {/* Ion-icon removed temporarily */}
+               Go to Dashboard
+             </Link>
            </Button>
            {/* Optionally add logout button here too */}
          </>
       ) : (
         <>
           <Button size="lg" asChild>
-            <Link href="/login">Log In</Link>
+            <Link href="/login" className="flex items-center gap-2">
+              {/* <ion-icon name="log-in-outline" class="text-xl"></ion-icon> */} {/* Ion-icon removed temporarily */}
+              Log In
+            </Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="/signup">Sign Up</Link>
+            <Link href="/signup" className="flex items-center gap-2">
+              {/* <ion-icon name="person-add-outline" class="text-xl"></ion-icon> */} {/* Ion-icon removed temporarily */}
+              Sign Up
+            </Link>
           </Button>
         </>
       )}

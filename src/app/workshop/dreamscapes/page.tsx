@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import DreamscapesClientComponent from './DreamscapesClientComponent'; // We'll create this next
+import DreamscapesClientComponent from '@/app/workshop/dreamscapes/DreamscapesClientComponent'; // Using path alias
 
 export default async function DreamscapesWorkshopPage() {
   const supabase = await createClient();
@@ -20,8 +20,8 @@ export default async function DreamscapesWorkshopPage() {
   return (
     <div className={`min-h-screen ${lightBg} dark:bg-gray-900 p-4 sm:p-8 flex justify-center items-start`}>
       <div className="container mx-auto max-w-2xl w-full"> {/* Centered container */}
-        {/* Render the client component */}
-        <DreamscapesClientComponent userId={user.id} />
+        {/* Render the client component - removed userId prop */}
+        <DreamscapesClientComponent />
       </div>
     </div>
   );

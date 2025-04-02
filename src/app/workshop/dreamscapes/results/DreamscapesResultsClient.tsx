@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState } from 'react'; // Import useState
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; // Added CardFooter
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { type DreamscapesAnalysis } from '@/types/profile'; // Import shared type
+import { type DreamscapesAnalysis } from '@/types/profile';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react'; // Import icons
+import { Loader2, RefreshCw } from 'lucide-react';
 
 interface DreamscapesResultsClientProps {
-  analysis: DreamscapesAnalysis | null; // Initial analysis passed from server
+  analysis: DreamscapesAnalysis | null;
 }
 
 const DreamscapesResultsClient: React.FC<DreamscapesResultsClientProps> = ({ analysis: initialAnalysis }) => {
-  const [analysis, setAnalysis] = useState<DreamscapesAnalysis | null>(initialAnalysis); // State to hold current/updated analysis
+  const [analysis, setAnalysis] = useState<DreamscapesAnalysis | null>(initialAnalysis);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +23,6 @@ const DreamscapesResultsClient: React.FC<DreamscapesResultsClientProps> = ({ ana
     try {
       const response = await fetch('/api/workshop/dreamscapes/analyze', {
         method: 'POST',
-        // No body needed, API fetches latest response based on user auth
       });
       const result = await response.json();
 
@@ -31,19 +30,18 @@ const DreamscapesResultsClient: React.FC<DreamscapesResultsClientProps> = ({ ana
         throw new Error(result.error || 'Failed to trigger analysis');
       }
 
-      // Update the displayed analysis with the new result from the API response
       setAnalysis(result.analysis);
-      alert('Re-analysis complete! Insights updated.'); // Simple feedback
+      alert('Re-analysis complete! Insights updated.');
 
-    } catch (err: any) {
+    } catch (err) { // Correctly typed error
       console.error("Re-analysis error:", err);
-      setError(`Failed to re-analyze: ${err.message}`);
-      alert(`Error: ${err.message}`); // Simple error feedback
+      const message = err instanceof Error ? err.message : 'An unknown error occurred during analysis.';
+      setError(`Failed to re-analyze: ${message}`);
+      alert(`Error: ${message}`);
     } finally {
       setIsLoading(false);
     }
   };
-
 
   if (!analysis) {
     return (
@@ -53,7 +51,7 @@ const DreamscapesResultsClient: React.FC<DreamscapesResultsClientProps> = ({ ana
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">
-            It seems the AI analysis for your Dreamscapes workshop hasn't run yet or no responses were found.
+            It seems the AI analysis for your Dreamscapes workshop has not run yet or no responses were found.
             Please ensure you have completed the workshop.
           </p>
           <div className="flex gap-2">
@@ -74,7 +72,7 @@ const DreamscapesResultsClient: React.FC<DreamscapesResultsClientProps> = ({ ana
   // Display Analysis Results
   return (
     <Card className="bg-white dark:bg-gray-800/50 shadow-md">
-      {/* Removed CardHeader as title is on page */}
+      {/* Removed empty CardHeader */}
       <CardContent className="space-y-6 p-6">
         <div>
           <h3 className="font-semibold text-lg mb-2 text-gray-800 dark:text-gray-100">AI Summary</h3>

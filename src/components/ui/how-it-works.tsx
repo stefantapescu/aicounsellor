@@ -1,5 +1,5 @@
 import React from "react";
-import { UserPlus, ClipboardCheck, MessageSquare } from "lucide-react";
+// Removed lucide-react imports
 import { cn } from "@/lib/utils"; // Assuming this exists
 
 interface StepProps {
@@ -46,19 +46,19 @@ export function HowItWorksSection({
       number: 1,
       title: "Sign Up",
       description: "Create your free account.",
-      icon: <UserPlus className="h-5 w-5" />,
+      icon: <span>👤</span>, // Placeholder - Ion-icon removed temporarily
     },
     {
       number: 2,
       title: "Take Assessments",
       description: "Complete our guided quizzes and vocational tests.",
-      icon: <ClipboardCheck className="h-5 w-5" />,
+      icon: <span>📋</span>, // Placeholder - Ion-icon removed temporarily
     },
     {
       number: 3,
       title: "Chat & Explore",
       description: "Interact with your AI consultant and review your results.",
-      icon: <MessageSquare className="h-5 w-5" />,
+      icon: <span>💬</span>, // Placeholder - Ion-icon removed temporarily
     },
   ];
 

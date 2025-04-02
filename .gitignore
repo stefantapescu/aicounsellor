@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Apple Secrets
+AuthKey_*.p8
+client_secret.txt
+generate_apple_secret.rb
+applejwt
+
+# iOS Project
+/ios/
+
+# Supabase Migrations (Optional)
+/supabase/migrations/

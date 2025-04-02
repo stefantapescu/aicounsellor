@@ -10,9 +10,9 @@ export interface DreamscapesAnalysis {
 // Define type for the vocational profile data from Supabase
 export interface VocationalProfile {
   user_id: string;
-  assessment_summary: any | null; // Define more specifically if needed
+  assessment_summary: unknown | null; // Changed any to unknown
   dreamscapes_analysis: DreamscapesAnalysis | null;
-  quiz_performance: any | null; // Define more specifically if needed
+  quiz_performance: unknown | null; // Changed any to unknown
   combined_profile_summary: string | null;
   last_updated: string;
 }

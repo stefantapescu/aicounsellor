@@ -4,14 +4,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+// Removed unused Input import
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Loader2 } from 'lucide-react';
-import RoboYouniMascot from '@/components/RoboYouniMascot'; // Import mascot
+import RoboYouniMascot from '@/components/RoboYouniMascot';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface DreamscapesClientComponentProps {
-  userId: string;
+  // No props currently needed, but keeping interface for potential future use
 }
 
 interface WorkshopResponses {
@@ -37,7 +38,7 @@ const stepDurations: { [key: number]: number } = {
   12: 5 * 60,  // Step 12: Essay 2 (5 mins)
 };
 
-const DreamscapesClientComponent: React.FC<DreamscapesClientComponentProps> = ({ userId }) => {
+const DreamscapesClientComponent: React.FC<DreamscapesClientComponentProps> = () => { // Removed userId from destructuring
   const [currentStep, setCurrentStep] = useState(1); // Start at step 1 (Intro)
   const [responses, setResponses] = useState<WorkshopResponses>({
     dreams: ['', '', ''],
@@ -111,7 +112,7 @@ const DreamscapesClientComponent: React.FC<DreamscapesClientComponentProps> = ({
              <RoboYouniMascot width={120} height={120} />
              <h3 className="text-xl font-semibold">Welcome to the Dreamscapes Workshop!</h3>
              <p className="text-muted-foreground max-w-md">
-                 Hi there! I'm Youni. Let's embark on a journey of self-discovery together. In this workshop, we'll explore your aspirations through 11 creative steps:
+                 Hi there! I am Youni. Let us embark on a journey of self-discovery together. In this workshop, we will explore your aspirations through 11 creative steps:
              </p>
              <ul className="list-disc list-inside text-left text-sm text-muted-foreground max-w-md">
                  <li>Identify 3 of your biggest dreams.</li>
@@ -148,7 +149,7 @@ const DreamscapesClientComponent: React.FC<DreamscapesClientComponentProps> = ({
      return (
        <div className="space-y-6">
          <h3 className="text-lg font-semibold">Step {stepNumber}: Expand Dream {dreamIndex + 1} - 10 Year Visions</h3>
-         <p className="text-sm text-muted-foreground">For your dream "{dream || `Dream ${dreamIndex + 1}`}", describe three specific visions of where you see yourself in 10 years.</p>
+         <p className="text-sm text-muted-foreground">For your dream &quot;{dream || `Dream ${dreamIndex + 1}`}&quot;, describe three specific visions of where you see yourself in 10 years.</p>
          {[0, 1, 2].map((subDreamIndex) => (
            <div key={`subdream-vision-${dreamIndex}-${subDreamIndex}`} className="space-y-2 border-t pt-3 first:border-t-0">
              <label htmlFor={`subdream-vision-${dreamIndex}-${subDreamIndex}`} className="text-sm font-medium">Vision {subDreamIndex + 1}</label>
@@ -165,10 +166,10 @@ const DreamscapesClientComponent: React.FC<DreamscapesClientComponentProps> = ({
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-semibold">Step {stepNumber}: Reflect on Dream {dreamIndex + 1} Visions</h3>
-        <p className="text-sm text-muted-foreground">For your dream "{dream || `Dream ${dreamIndex + 1}`}", reflect on *why* each 10-year vision is important to you.</p>
+        <p className="text-sm text-muted-foreground">For your dream &quot;{dream || `Dream ${dreamIndex + 1}`}&quot;, reflect on *why* each 10-year vision is important to you.</p>
         {[0, 1, 2].map((subDreamIndex) => (
           <div key={`subdream-why-${dreamIndex}-${subDreamIndex}`} className="space-y-3 border-t pt-4 first:border-t-0">
-             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Regarding Vision {subDreamIndex + 1}: "{responses.subDreams[`dream_${dreamIndex}`]?.[subDreamIndex]?.vision || '...'}"</p>
+             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Regarding Vision {subDreamIndex + 1}: &quot;{responses.subDreams[`dream_${dreamIndex}`]?.[subDreamIndex]?.vision || '...'}&quot;</p>
              <label htmlFor={`subdream-why-${dreamIndex}-${subDreamIndex}`} className="text-sm font-medium block pt-1">Why is this vision important? Why thrive here?</label>
              <Textarea id={`subdream-why-${dreamIndex}-${subDreamIndex}`} placeholder="Reflect on your motivation..." value={responses.subDreams[`dream_${dreamIndex}`]?.[subDreamIndex]?.why || ''} onChange={(e) => handleSubDreamWhyChange(dreamIndex, subDreamIndex, e.target.value)} rows={2}/>
           </div>
@@ -275,9 +276,10 @@ const DreamscapesClientComponent: React.FC<DreamscapesClientComponentProps> = ({
         throw new Error(errorData.error || 'Failed to submit responses');
       }
       setIsComplete(true);
-    } catch (err: any) {
+    } catch (err) { // Changed from err: any
       console.error("Submission error:", err);
-      setError(`Submission failed: ${err.message}`);
+      const message = err instanceof Error ? err.message : 'An unknown error occurred during submission.'; // Type check for error message
+      setError(`Submission failed: ${message}`);
     } finally {
       setIsLoading(false);
     }

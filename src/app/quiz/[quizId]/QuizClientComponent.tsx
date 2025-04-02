@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import React, { useState, useTransition } from 'react';
-// Import the correct action for updating progress
+import React, { useState, useEffect, useTransition } from 'react';
+import { useParams, useRouter } from 'next/navigation'; // Import useParams and useRouter
+import { createClient } from '@/utils/supabase/client'; // Import client-side Supabase
 import { updateUserProgressAfterQuiz } from '../actions';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-// Removed unused CheckCircle, XCircle, cn imports
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 
-// Define types based on expected data structure
+// Define types
 interface QuizQuestion {
     id: string;
     text: string;
@@ -18,53 +18,159 @@ interface QuizQuestion {
     explanation?: string | null;
 }
 
-interface QuizClientComponentProps {
-    userId: string;
-    quizId: string;
-    questions: QuizQuestion[]; // Use the defined type
-    // Add previous responses if needed for resuming quizzes
+// Define the database question type (needed for mapping)
+interface DbQuizQuestion {
+  id: string;
+  quiz_id: string;
+  question_order: number;
+  question_text: string;
+  correct_answer?: string;
+  options: { value: string; text: string }[];
 }
 
-export default function QuizClientComponent({ userId, quizId, questions }: QuizClientComponentProps) {
+// Map database question format to client format (moved inside or imported)
+function mapDatabaseQuestionToClientFormat(dbQuestion: DbQuizQuestion): QuizQuestion {
+  return {
+    id: dbQuestion.id,
+    text: dbQuestion.question_text,
+    options: dbQuestion.options.map((opt) => ({
+      id: opt.value,
+      text: opt.text
+    })),
+    correct_option_id: dbQuestion.correct_answer || '',
+    explanation: null // Or fetch explanation if available
+  };
+}
+
+
+// No props needed anymore, component fetches its own data
+export default function QuizClientComponent() {
+    const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+    const [userId, setUserId] = useState<string | undefined>(undefined);
+    const [quizId, setQuizId] = useState<string | undefined>(undefined);
+    const [isLoading, setIsLoading] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    // Use Record<string, string> for answers { questionId: selectedOptionId }
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState(0);
     const [isPending, startTransition] = useTransition();
-    const [error, setError] = useState<string | null>(null);
-    // Removed unused feedback state
+    const [submitError, setSubmitError] = useState<string | null>(null); // Renamed error state for clarity
+
+    const params = useParams();
+    const router = useRouter();
+    const supabase = createClient(); // Initialize client Supabase
+
+    useEffect(() => {
+        const loadQuizData = async () => {
+            setIsLoading(true);
+            setFetchError(null);
+
+            // 1. Get Quiz ID from URL
+            const idFromParams = params.quizId;
+            if (!idFromParams || typeof idFromParams !== 'string') {
+                setFetchError("Invalid Quiz ID.");
+                setIsLoading(false);
+                return;
+            }
+            setQuizId(idFromParams);
+
+            // 2. Get User Session
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) {
+                console.warn("Quiz page accessed without user, redirecting.");
+                router.push(`/login?message=Please log in to take the quiz&redirectTo=/quiz/${idFromParams}`);
+                // Don't set loading false here, let redirect happen
+                return;
+            }
+            setUserId(user.id);
+
+            // 3. Fetch Quiz Questions
+            const { data: dbQuestions, error: questionsError } = await supabase
+                .from('quiz_questions')
+                .select('*')
+                .eq('quiz_id', idFromParams)
+                .order('question_order', { ascending: true });
+
+            if (questionsError) {
+                console.error('Error fetching quiz questions:', questionsError.message);
+                setFetchError('Error loading quiz questions.');
+                setIsLoading(false);
+                return;
+            }
+
+            if (!dbQuestions || dbQuestions.length === 0) {
+                setFetchError('Quiz not found or has no questions.');
+                setIsLoading(false);
+                // Consider redirecting or showing a 'not found' message
+                return;
+            }
+
+            // 4. Map and set questions
+            const mappedQuestions = (dbQuestions as DbQuizQuestion[]).map(mapDatabaseQuestionToClientFormat);
+            setQuestions(mappedQuestions);
+            setIsLoading(false);
+        };
+
+        loadQuizData();
+    }, [params, router, supabase]); // Add dependencies
+
+    // Return loading/error states before trying to access questions[index]
+    if (isLoading) {
+        return <div>Loading quiz...</div>;
+    }
+
+    if (fetchError) {
+        return <div className="p-6 text-center text-red-500">{fetchError}</div>;
+    }
+
+    // Ensure questions array is not empty before accessing
+     if (questions.length === 0) {
+        return <div className="p-6 text-center text-gray-500">No questions available for this quiz.</div>;
+    }
 
     const currentQuestion = questions[currentQuestionIndex];
+     // Ensure currentQuestion is defined before proceeding (should be covered by above checks, but good practice)
+    if (!currentQuestion) {
+        console.error("Error: currentQuestion is undefined despite checks.");
+        return <div className="p-6 text-center text-red-500">An unexpected error occurred loading the question.</div>;
+    }
+
 
     const handleAnswerChange = (questionId: string, selectedOptionId: string) => {
         setAnswers(prev => ({ ...prev, [questionId]: selectedOptionId }));
-        // Removed feedback update logic
     };
 
     const handleSubmit = () => {
+        if (!userId || !quizId) {
+             setSubmitError("User or Quiz ID missing, cannot submit.");
+             return;
+        }
+
         let calculatedScore = 0;
-        // Removed newFeedback declaration
         questions.forEach(q => {
             const isCorrect = answers[q.id] === q.correct_option_id;
-            // Removed feedback assignment
             if (isCorrect) {
                 calculatedScore++;
             }
         });
         setScore(calculatedScore);
-        // Removed feedback state update
         setSubmitted(true);
-        setError(null); // Clear previous errors
+        setSubmitError(null); // Clear previous errors
 
         // Trigger progress update using server action
         startTransition(async () => {
-            // Call the action that fetches responses and updates progress/badges
-            const result = await updateUserProgressAfterQuiz(userId, quizId);
-            if (result.error) {
-                setError(`Failed to update progress: ${result.error}`);
+            // Ensure userId and quizId are available before calling action
+            if (userId && quizId) {
+                const result = await updateUserProgressAfterQuiz(userId, quizId);
+                if (result.error) {
+                    setSubmitError(`Failed to update progress: ${result.error}`);
+                } else {
+                    console.log("Quiz progress updated successfully:", result);
+                    // Optionally use returned points/level/badges for immediate UI feedback
+                }
             } else {
-                console.log("Quiz progress updated successfully:", result);
+                 setSubmitError("Cannot update progress: User or Quiz ID is missing.");
                 // Optionally use returned points/level/badges for immediate UI feedback
             }
         });
@@ -106,8 +212,14 @@ export default function QuizClientComponent({ userId, quizId, questions }: QuizC
                 <CardContent className="text-center">
                     <p className="text-xl font-semibold">Your Score: {score} / {questions.length} ({successRate.toFixed(0)}%)</p>
                     {/* Optionally add a button to review answers or go back to dashboard */}
-                    <Button onClick={() => window.location.reload()} className="mt-6">Retake Quiz</Button> {/* Simple retake */}
-                     <Button variant="link" onClick={() => window.history.back()} className="mt-6 ml-4">Back</Button>
+                    <Button onClick={() => window.location.reload()} className="mt-6 inline-flex items-center gap-1"> {/* Added flex items-center gap */}
+                       {/* <ion-icon name="refresh-outline"></ion-icon> */} {/* Ion-icon removed temporarily */}
+                       Retake Quiz
+                    </Button>
+                     <Button variant="link" onClick={() => window.history.back()} className="mt-6 ml-4 inline-flex items-center gap-1"> {/* Added flex items-center gap */}
+                       {/* <ion-icon name="arrow-back-outline"></ion-icon> */} {/* Ion-icon removed temporarily */}
+                       Back
+                    </Button>
                 </CardContent>
             </Card>
         );
@@ -135,14 +247,17 @@ export default function QuizClientComponent({ userId, quizId, questions }: QuizC
                 </RadioGroup>
             </CardContent>
             <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={handlePrevious} disabled={currentQuestionIndex === 0 || isPending}>
+                <Button variant="outline" onClick={handlePrevious} disabled={currentQuestionIndex === 0 || isPending} className="inline-flex items-center gap-1"> {/* Added flex, items-center, gap */}
+                    {/* <ion-icon name="arrow-back-outline"></ion-icon> */} {/* Ion-icon removed temporarily */}
                     Previous
                 </Button>
-                <Button onClick={handleNext} disabled={!answers[currentQuestion.id] || isPending}>
+                <Button onClick={handleNext} disabled={!answers[currentQuestion.id] || isPending} className="inline-flex items-center gap-1"> {/* Added flex, items-center, gap */}
                     {isPending ? 'Saving...' : (isLastQuestion ? 'Finish Quiz' : 'Next')}
+                    {/* {!isLastQuestion && <ion-icon name="arrow-forward-outline" class="ml-1"></ion-icon>} */} {/* Ion-icon removed temporarily */}
+                    {/* {isLastQuestion && <ion-icon name="checkmark-done-outline" class="ml-1"></ion-icon>} */} {/* Ion-icon removed temporarily */}
                 </Button>
             </CardFooter>
-            {error && <p className="p-4 text-center text-sm text-red-600">{error}</p>}
+            {submitError && <p className="p-4 text-center text-sm text-red-600">{submitError}</p>}
         </Card>
     );
 }

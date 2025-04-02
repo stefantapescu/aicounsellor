@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import DreamscapesResultsClient from './DreamscapesResultsClient'; // We'll create this next
-import { type DreamscapesAnalysis, type VocationalProfile } from '@/types/profile'; // Import shared types
+import DreamscapesResultsClient from './DreamscapesResultsClient';
+import { type VocationalProfile } from '@/types/profile'; // Removed unused DreamscapesAnalysis import
 
 export default async function DreamscapesResultsPage() {
   const supabase = await createClient();
@@ -43,5 +43,5 @@ export default async function DreamscapesResultsPage() {
     </div>
   );
 }
-
-// No need to re-export types as they are imported from the shared file
+// Removed unused type export
+// export type { DreamscapesAnalysis };

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+// Removed incorrect Ionicons CSS import
 import RoboYouniMascot from '@/components/RoboYouniMascot'; // Import the mascot component
+import IoniconsSetup from "@/components/IoniconsSetup"; // Import the Ionicons setup component
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +37,7 @@ export default function RootLayout({
         <main className="min-h-screen flex flex-col items-center w-full"> {/* Added w-full */}
           {children}
         </main>
+        <IoniconsSetup /> {/* Add the setup component here */}
       </body>
     </html>
   );

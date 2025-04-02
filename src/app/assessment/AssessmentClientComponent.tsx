@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import { Label } from "@/components/ui/label"
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+// Removed lucide-react imports
 
 // Import data and types from the new file
 import {
@@ -335,9 +335,9 @@ export default function AssessmentClientComponent({ userId }: AssessmentClientCo
                                     variant="outline"
                                     onClick={handlePrevious}
                                     disabled={currentQuestionIndex === 0 || isPending}
-                                    className="gap-1 pl-2.5 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    className="gap-1 pl-2.5 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 inline-flex items-center" // Added inline-flex and items-center
                                 >
-                                    <ArrowLeft className="h-4 w-4" />
+                                    {/* <ion-icon name="arrow-back-outline"></ion-icon> */} {/* Ion-icon removed temporarily */}
                                     Back
                                 </Button>
 
@@ -345,20 +345,20 @@ export default function AssessmentClientComponent({ userId }: AssessmentClientCo
                                     <Button
                                         onClick={handleNext}
                                         disabled={isPending || answers[currentQuestion.id] === undefined}
-                                        className="gap-1 pr-2.5 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-700 dark:hover:bg-purple-800"
+                                        className="gap-1 pr-2.5 bg-purple-600 hover:bg-purple-700 text-white dark:bg-purple-700 dark:hover:bg-purple-800 inline-flex items-center" // Added inline-flex and items-center
                                     >
                                         Next
-                                        <ArrowRight className="h-4 w-4" />
+                                        {/* <ion-icon name="arrow-forward-outline" class="ml-1"></ion-icon> */} {/* Ion-icon removed temporarily */}
                                     </Button>
                                 ) : (
                                     <Button
                                         onClick={handleFinish}
                                         disabled={isPending || answers[currentQuestion.id] === undefined}
-                                        className="bg-pink-600 hover:bg-pink-700 text-white dark:bg-pink-700 dark:hover:bg-pink-800"
+                                        className="bg-pink-600 hover:bg-pink-700 text-white dark:bg-pink-700 dark:hover:bg-pink-800 inline-flex items-center" // Added inline-flex and items-center
                                     >
                                         {/* Escaped apostrophe */}
                                         {isPending ? 'Finishing...' : 'Finish Assessment'}
-                                        <Check className="ml-1 h-4 w-4" />
+                                        {/* <ion-icon name="checkmark-outline" class="ml-1"></ion-icon> */} {/* Ion-icon removed temporarily */}
                                     </Button>
                                 )}
                             </div>

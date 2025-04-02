@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input' // Assuming input component exists
 import { ScrollArea } from '@/components/ui/scroll-area' // Assuming scroll-area exists
-import { SendHorizonal } from 'lucide-react'
+// Removed lucide-react import
 import { cn } from '@/lib/utils'
 import { saveChatMessage, prepareAssistantPrompt } from './actions' // Import server actions
 
@@ -120,12 +120,12 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
             onChange={handleInputChange}
             disabled={isPending}
             className="flex-1"
-          />
-          <Button type="submit" size="icon" disabled={isPending || !input.trim()}>
-            <SendHorizonal className="h-4 w-4" />
-            <span className="sr-only">Send</span>
-          </Button>
-        </form>
+            />
+            <Button type="submit" size="icon" disabled={isPending || !input.trim()}>
+              {/* <ion-icon name="send-outline" class="text-lg"></ion-icon> */} {/* Ion-icon removed temporarily */}
+              <span className="sr-only">Send</span>
+            </Button>
+          </form>
       </div>
     </div>
   );

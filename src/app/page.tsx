@@ -3,7 +3,7 @@
 import { AIEducationHero } from '@/components/ai-education-hero'
 import { Features } from '@/components/ui/features'
 import { HowItWorksSection } from '@/components/ui/how-it-works'
-import { MessageCircle, ClipboardList, Lightbulb } from "lucide-react";
+// Removed lucide-react icons
 
 // Make the component non-async as auth check is moved to client
 export default function Home() {
@@ -26,17 +26,17 @@ export default function Home() {
             subheading="Leverage AI and guided assessments to find your ideal career path."
             features={[
               {
-                icon: <MessageCircle className="h-auto w-6" />,
+                icon: <span>💬</span>, // Placeholder - Ion-icon removed temporarily
                 title: "AI Consultant Chat",
                 description: "Get personalized advice and answers to your career questions.",
               },
               {
-                icon: <ClipboardList className="h-auto w-6" />,
+                icon: <span>📋</span>, // Placeholder - Ion-icon removed temporarily
                 title: "In-Depth Assessments",
                 description: "Understand your interests, skills, and values.",
               },
               {
-                icon: <Lightbulb className="h-auto w-6" />,
+                icon: <span>💡</span>, // Placeholder - Ion-icon removed temporarily
                 title: "Personalized Results",
                 description: "Receive AI-powered analysis and career suggestions.",
               },
@@ -51,7 +51,7 @@ export default function Home() {
 
       {/* TODO: Add Footer */}
        <footer className="w-full border-t py-6 text-center text-sm text-gray-500">
-         &copy; {new Date().getFullYear()} AI Youni. All rights reserved.
+         &copy; {new Date().getFullYear()} AI Youni. All rights reserved. {/* <ion-icon name="heart" class="text-red-500 align-middle"></ion-icon> */} {/* Ion-icon removed temporarily */}
        </footer>
     </div>
   );

@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+// Removed unused cookies import
+// import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   // Corrected: createClient likely doesn't need cookieStore here
