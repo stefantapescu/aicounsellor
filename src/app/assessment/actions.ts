@@ -1,19 +1,17 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
-import { type SupabaseClient } from '@supabase/supabase-js' // Import type from main package
-import { revalidatePath } from 'next/cache'
+import { createClient } from '@/utils/supabase/server'; // Keep this for server actions
+import { type SupabaseClient } from '@supabase/supabase-js'; // Re-add SupabaseClient type for getAssessmentDataForPrompt
+import { revalidatePath } from 'next/cache';
 import OpenAI from 'openai';
+// Import the core processing logic from the new utility file
+import { processAndSaveAssessmentProfile } from '@/lib/assessment-processing';
 
+// Import only necessary types/data from assessmentData
 import {
-    allQuestions,
-    type AssessmentQuestion,
-    type ScenarioChoiceQuestion,
-    type AptitudeQuestion,
-    type LearningStyleQuestion,
-    // Removed unused: LikertQuestion, ChoiceOption, SectionId
     valueItems // Import valueItems for prompt helper
 } from './assessmentData';
+// Removed unused imports: allQuestions, AssessmentQuestion, ScenarioChoiceQuestion, AptitudeQuestion, LearningStyleQuestion
 
 // Type for simplified badge data (can be shared)
 interface BadgeData {
@@ -297,85 +295,35 @@ export async function saveAnalysisResult(
     }
 }
 
-// --- Function to Calculate and Save Structured Profile ---
-// Define type for the profile data being upserted
-type UserProfileUpsert = {
-    user_id: string;
-    assessment_session_id?: string | null;
-    riasec_scores: Record<string, number>;
-    personality_scores: Record<string, number>;
-    aptitude_scores: { verbalCorrect: number; numericalCorrect: number; abstractCorrect: number; totalCorrect: number; totalAttempted: number; };
-    work_values?: { ranked: string[]; } | null;
-    learning_style: string;
-    raw_responses_snapshot?: Record<string, string | number | string[]>; // More specific type
-    updated_at: string;
-};
+// --- Function to Calculate and Save Structured Profile AND Update Vocational Profile ---
 
-export async function generateAndSaveAssessmentProfile(userId: string, assessmentId: string = 'main_vocational') {
-  if (!userId) { console.error('Missing userId for profile generation.'); return { error: 'User ID is required for profile generation.' } }
-  const supabase = await createClient()
-  try {
-    const { data: rawResponsesData, error: fetchError } = await supabase.from('vocational_responses').select('section_id, response_data').eq('user_id', userId).eq('assessment_id', assessmentId);
-    const rawResponses = rawResponsesData as RawResponseRow[] | null; // Cast fetched data
-    if (fetchError) throw fetchError;
-    if (!rawResponses || rawResponses.length === 0) { return { error: 'No vocational responses found to generate profile.' }; }
+// REMOVED VocationalProfileUpdate type - logic moved to src/lib/assessment-processing.ts
+// REMOVED _internal_generateAndSaveProfile function - logic moved to src/lib/assessment-processing.ts
 
-    // Use specific type for allAnswers
-    const allAnswers: Record<string, string | number | string[]> = rawResponses.reduce((acc, section) => { if (section.response_data && typeof section.response_data === 'object') { Object.assign(acc, section.response_data); } else { console.warn(`Unexpected response_data format for section ${section.section_id}:`, section.response_data); } return acc; }, {});
-
-    const riasecScores: Record<string, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
-    const personalityScores: Record<string, number> = { O: 0, C: 0, E: 0, A: 0, N: 0 };
-    const aptitudeScores = { verbalCorrect: 0, numericalCorrect: 0, abstractCorrect: 0, totalAttempted: 0 };
-    const learningStyleCounts: Record<string, number> = { V: 0, A: 0, R: 0, K: 0 };
-
-    allQuestions.forEach((question: AssessmentQuestion) => {
-        const answer = allAnswers[question.id]; if (answer === undefined || answer === null) { return; }
-        if (question.sectionId === 'interests' && question.inputType === 'scenario_choice') { const scenarioQuestion = question as ScenarioChoiceQuestion; const chosenOption = scenarioQuestion.options.find(opt => opt.id === answer); if (chosenOption?.theme && riasecScores.hasOwnProperty(chosenOption.theme)) { riasecScores[chosenOption.theme]++; } }
-        if (question.sectionId === 'personality' && question.inputType === 'likert') { const score = Number(answer); if (!isNaN(score)) { if (question.id.startsWith('pers_openness')) personalityScores.O += score; else if (question.id.startsWith('pers_consc')) personalityScores.C += score; else if (question.id.startsWith('pers_extra')) personalityScores.E += score; else if (question.id.startsWith('pers_agree')) personalityScores.A += score; else if (question.id.startsWith('pers_neuro')) { if (question.id === 'pers_neuro_calm') { personalityScores.N += score; } else if (question.id === 'pers_neuro_worry') { personalityScores.N += (6 - score); } } } }
-        if (question.sectionId === 'aptitude' && question.inputType === 'multiple_choice') { const aptitudeQuestion = question as AptitudeQuestion; aptitudeScores.totalAttempted++; if (answer === aptitudeQuestion.correctAnswerId) { if (question.id.startsWith('apt_verbal')) aptitudeScores.verbalCorrect++; else if (question.id.startsWith('apt_numerical')) aptitudeScores.numericalCorrect++; else if (question.id.startsWith('apt_abstract')) aptitudeScores.abstractCorrect++; } }
-        if (question.sectionId === 'learning_style' && question.inputType === 'multiple_choice') { const lsQuestion = question as LearningStyleQuestion; const chosenOption = lsQuestion.options.find(opt => opt.id === answer); if (chosenOption?.learningStyle && learningStyleCounts.hasOwnProperty(chosenOption.learningStyle)) { learningStyleCounts[chosenOption.learningStyle]++; } }
-    });
-
-    const finalAptitudeScores = { verbalCorrect: aptitudeScores.verbalCorrect, numericalCorrect: aptitudeScores.numericalCorrect, abstractCorrect: aptitudeScores.abstractCorrect, totalCorrect: aptitudeScores.verbalCorrect + aptitudeScores.numericalCorrect + aptitudeScores.abstractCorrect, totalAttempted: aptitudeScores.totalAttempted };
-    let dominantLearningStyles: string[] = []; let maxCount = 0; for (const style in learningStyleCounts) { if (learningStyleCounts[style] > maxCount) { maxCount = learningStyleCounts[style]; dominantLearningStyles = [style]; } else if (learningStyleCounts[style] === maxCount && maxCount > 0) { dominantLearningStyles.push(style); } } const styleMap: Record<string, string> = { V: 'Visual', A: 'Auditory', R: 'Read/Write', K: 'Kinesthetic' }; const learningStyleResult = dominantLearningStyles.map(s => styleMap[s] || s).join('/') || 'Not determined';
-    const workValuesRanked: string[] | null = (allAnswers['value_ranking_top3'] && Array.isArray(allAnswers['value_ranking_top3'])) ? allAnswers['value_ranking_top3'] : null;
-
-    console.log("Calculated RIASEC:", riasecScores); console.log("Calculated Personality:", personalityScores); console.log("Calculated Aptitude:", finalAptitudeScores); console.log("Determined Learning Style:", learningStyleResult); console.log("Processed Work Values:", workValuesRanked);
-
-    const profileUpsertData: UserProfileUpsert = {
-        user_id: userId,
-        assessment_session_id: null,
-        riasec_scores: riasecScores,
-        personality_scores: personalityScores,
-        aptitude_scores: finalAptitudeScores,
-        work_values: workValuesRanked ? { ranked: workValuesRanked } : null,
-        learning_style: learningStyleResult,
-        raw_responses_snapshot: allAnswers,
-        updated_at: new Date().toISOString()
-    };
-
-    const { data: savedProfile, error: saveError } = await supabase.from('user_assessment_profiles').upsert(profileUpsertData, { onConflict: 'user_id' }).select().single();
-    if (saveError) throw saveError;
-    console.log(`Assessment profile generated and saved/updated for user ${userId}:`, savedProfile);
-    revalidatePath('/results');
-    return { success: true, profile: savedProfile };
-  } catch (error: unknown) { // Type error as unknown
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`Error generating/saving assessment profile for user ${userId}:`, message);
-    return { error: message };
-  }
+// Exported Server Action - This is what the Next.js app uses.
+// It creates its own client and calls the processing function from the lib file.
+export async function generateAndSaveAssessmentProfile(
+    userId: string,
+    assessmentId: string = 'main_vocational'
+) {
+    const supabase = await createClient(); // Create client using server utility
+    // Call the processing function from the lib file
+    return await processAndSaveAssessmentProfile(userId, assessmentId, supabase);
 }
 
 
 // --- Updated Combined Function to Generate and Save Report + Story ---
+// This function now correctly calls the EXPORTED generateAndSaveAssessmentProfile
 export async function generateAndSaveAssessmentAnalysis(userId: string, assessmentId: string = 'main_vocational') {
   if (!userId) { console.error('Missing userId for analysis.'); return { error: 'User ID is required for analysis.' } }
 
   // 1. --- Ensure Structured Profile Exists First ---
   try {
+    // Call the exported server action, which handles client creation
     const profileResult = await generateAndSaveAssessmentProfile(userId, assessmentId);
     if (profileResult.error) {
       console.error(`Profile generation failed before AI analysis could start: ${profileResult.error}`);
+      // Pass the specific error message to saveAnalysisResult
       await saveAnalysisResult(userId, `Error: Prerequisite profile calculation failed - ${profileResult.error}`, null, false, assessmentId);
       return { success: false, error: `Prerequisite profile calculation failed: ${profileResult.error}`, analysis: null };
     }
